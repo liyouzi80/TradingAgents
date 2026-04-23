@@ -5,6 +5,7 @@ TradingAgents 自动化报告生成脚本
 
 import os
 import sys
+import copy
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -42,7 +43,14 @@ def get_analysis_date() -> str:
 
 
 def build_config() -> dict:
+    from tradingagents.default_config import DEFAULT_CONFIG
+
+    # 基于默认配置修改，确保所有必要字段都存在
+    config = copy.deepcopy(DEFAULT_CONFIG)
+
     llm_provider = os.getenv("LLM_PROVIDER", "deepseek")
+    config["llm_provider"] = llm_provider
+
     model_map = {
         "deepseek": {
             "deep": os.getenv("DEEP_THINK_MODEL", "deepseek-chat"),
@@ -58,15 +66,13 @@ def build_config() -> dict:
         },
     }
     models = model_map.get(llm_provider, model_map["deepseek"])
-    return {
-        "llm_provider": llm_provider,
-        "backend_url": os.getenv("BACKEND_URL", "https://api.deepseek.com/v1"),
-        "deep_think_llm": models["deep"],
-        "quick_think_llm": models["quick"],
-        "max_debate_rounds": int(os.getenv("MAX_DEBATE_ROUNDS", "1")),
-        "max_risk_discuss_rounds": int(os.getenv("MAX_RISK_ROUNDS", "1")),
-        "online_tools": True,
-    }
+    config["deep_think_llm"] = models["deep"]
+    config["quick_think_llm"] = models["quick"]
+    config["max_debate_rounds"] = int(os.getenv("MAX_DEBATE_ROUNDS", "1"))
+    config["max_risk_discuss_rounds"] = int(os.getenv("MAX_RISK_ROUNDS", "1"))
+    config["online_tools"] = True
+
+    return config
 
 
 def analyze_ticker(ticker: str, analysis_date: str, config: dict) -> dict:
