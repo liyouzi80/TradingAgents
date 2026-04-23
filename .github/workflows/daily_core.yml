@@ -67,6 +67,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
           REPORT_PATH: ${{ steps.report.outputs.report_path }}
+          JSON_PATH: ${{ steps.report.outputs.json_path }}
           ANALYSIS_DATE: ${{ steps.report.outputs.analysis_date }}
           TICKERS: ${{ steps.report.outputs.tickers }}
           REPORT_GROUP: 'Daily Core'
