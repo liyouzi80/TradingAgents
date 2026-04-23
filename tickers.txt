@@ -11,3 +11,6 @@ UGL
 # 其他
 AAPL
 MSFT
+MUU
+TSLL
+SNXX
