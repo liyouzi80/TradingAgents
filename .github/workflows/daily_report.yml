@@ -74,7 +74,7 @@ jobs:
           # 分析日期（手动触发时可指定）
           ANALYSIS_DATE: ${{ github.event.inputs.analysis_date }}
         run: |
-          python scripts/auto_report.py
+          python -u scripts/auto_report.py
 
       # ── 6. 推送通知 ───────────────────────────────────────
       - name: Send notifications
