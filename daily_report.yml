@@ -1,0 +1,98 @@
+name: 📈 Daily Trading Report
+
+on:
+  # 每天北京时间早上 8:30 运行（UTC 00:30）
+  schedule:
+    - cron: '30 0 * * 1-5'   # 周一到周五
+
+  # 支持手动触发，方便测试
+  workflow_dispatch:
+    inputs:
+      analysis_date:
+        description: '分析日期 (格式: YYYY-MM-DD，留空则自动)'
+        required: false
+        default: ''
+      tickers_override:
+        description: '临时覆盖标的 (逗号分隔，如 NVDA,AAPL，留空则读 tickers.txt)'
+        required: false
+        default: ''
+
+jobs:
+  generate-report:
+    name: 生成每日报告
+    runs-on: ubuntu-latest
+    timeout-minutes: 300   # 最长 5 小时
+
+    steps:
+      # ── 1. 检出代码 ──────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. 设置 Python ────────────────────────────────────
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      # ── 3. 安装依赖 ───────────────────────────────────────
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install .
+          pip install requests
+
+      # ── 4. 处理临时标的覆盖 ───────────────────────────────
+      - name: Prepare tickers
+        run: |
+          if [ -n "${{ github.event.inputs.tickers_override }}" ]; then
+            echo "使用临时标的: ${{ github.event.inputs.tickers_override }}"
+            echo "${{ github.event.inputs.tickers_override }}" | tr ',' '\n' > tickers.txt
+          else
+            echo "使用 tickers.txt"
+            cat tickers.txt
+          fi
+
+      # ── 5. 生成分析报告 ───────────────────────────────────
+      - name: Generate trading report
+        id: report
+        env:
+          # LLM API Keys
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          # 金融数据
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          # 模型配置
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          DEEP_THINK_MODEL: ${{ secrets.DEEP_THINK_MODEL }}
+          QUICK_THINK_MODEL: ${{ secrets.QUICK_THINK_MODEL }}
+          MAX_DEBATE_ROUNDS: '1'
+          # 分析日期（手动触发时可指定）
+          ANALYSIS_DATE: ${{ github.event.inputs.analysis_date }}
+        run: |
+          python scripts/auto_report.py
+
+      # ── 6. 推送通知 ───────────────────────────────────────
+      - name: Send notifications
+        if: always()   # 即使上一步失败也尝试推送（会推送错误信息）
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          REPORT_PATH: ${{ steps.report.outputs.report_path }}
+          ANALYSIS_DATE: ${{ steps.report.outputs.analysis_date }}
+          TICKERS: ${{ steps.report.outputs.tickers }}
+        run: |
+          python scripts/notify.py
+
+      # ── 7. 上传报告为 Artifact（保留 30 天）──────────────
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trading-report-${{ steps.report.outputs.analysis_date || 'unknown' }}
+          path: reports/
+          retention-days: 30
