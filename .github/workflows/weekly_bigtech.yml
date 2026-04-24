@@ -31,19 +31,12 @@ jobs:
           pip install .
           pip install requests
 
-      - name: Prepare tickers (Big Tech + Value)
+      - name: Prepare tickers
         run: |
-          cat > tickers.txt << 'EOF'
-          AAPL
-          MSFL
-          GOOGL
-          ORCL
-          RKLB
-          BRK.B
-          EOF
-          echo "=== Big Tech Tickers ==="
+          # 从 tickers/bigtech.txt 读取标的,过滤注释和空行
+          grep -v '^#' tickers/bigtech.txt | grep -v '^$' > tickers.txt
+          echo "=== Tickers for this run ==="
           cat tickers.txt
-
       - name: Generate trading report
         id: report
         env:

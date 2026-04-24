@@ -31,20 +31,12 @@ jobs:
           pip install .
           pip install requests
 
-      - name: Prepare tickers (Semiconductor)
+      - name: Prepare tickers
         run: |
-          cat > tickers.txt << 'EOF'
-          MU
-          MUU
-          MRVL
-          AMDL
-          DRAM
-          SNXX
-          INTC
-          EOF
-          echo "=== Semiconductor Tickers ==="
+          # 从 tickers/semi.txt 读取标的,过滤注释和空行
+          grep -v '^#' tickers/semi.txt | grep -v '^$' > tickers.txt
+          echo "=== Tickers for this run ==="
           cat tickers.txt
-
       - name: Generate trading report
         id: report
         env:

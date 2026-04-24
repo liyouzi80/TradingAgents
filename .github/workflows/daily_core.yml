@@ -32,18 +32,12 @@ jobs:
           pip install .
           pip install requests
 
-      - name: Prepare tickers (Daily Core)
+      - name: Prepare tickers
         run: |
-          cat > tickers.txt << 'EOF'
-          TSLL
-          TQQQ
-          SQQQ
-          NVDA
-          UGL
-          EOF
-          echo "=== Core Tickers ==="
+          # 从 tickers/core.txt 读取标的,过滤注释和空行
+          grep -v '^#' tickers/core.txt | grep -v '^$' > tickers.txt
+          echo "=== Tickers for this run ==="
           cat tickers.txt
-
       - name: Generate trading report
         id: report
         env:
