@@ -62,6 +62,8 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           REPORT_PATH: ${{ steps.report.outputs.report_path }}
           JSON_PATH: ${{ steps.report.outputs.json_path }}
           ANALYSIS_DATE: ${{ steps.report.outputs.analysis_date }}
