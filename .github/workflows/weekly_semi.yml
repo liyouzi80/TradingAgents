@@ -91,7 +91,15 @@ jobs:
 
           # 并发冲突时自动重试:pull --rebase 后再 push
           for i in 1 2 3 4 5; do
-            git pull --rebase origin main && git push && exit 0
+            # 先 stash 掉未跟踪或未 stage 的改动,避免 rebase 失败
+            git stash -u -q || true
+
+            if git pull --rebase origin main && git push; then
+              git stash pop -q 2>/dev/null || true
+              exit 0
+            fi
+
+            git stash pop -q 2>/dev/null || true
             echo "Push 失败,第 $i 次重试 (等待 5-15 秒)..."
             sleep $((RANDOM % 10 + 5))
           done
