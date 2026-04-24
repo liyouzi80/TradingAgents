@@ -1,0 +1,8 @@
+# 半导体 / 存储 - 每周一 8:30 运行
+MU
+MUU
+MRVL
+AMDL
+DRAM
+SNXX
+INTC

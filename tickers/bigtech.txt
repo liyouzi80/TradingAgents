@@ -1,0 +1,7 @@
+# 大盘科技 / 价值 - 每周三 8:30 运行
+AAPL
+MSFL
+GOOGL
+ORCL
+RKLB
+BRK.B
