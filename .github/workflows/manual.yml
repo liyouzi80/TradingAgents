@@ -84,5 +84,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add reports/
-          git diff --staged --quiet || git commit -m "📊 Report: ${{ steps.report.outputs.analysis_date }} (${{ steps.report.outputs.tickers }})"
-          git push
+
+          # 没有变化就跳过
+          git diff --staged --quiet && exit 0
+
+          git commit -m "📊 Report: ${{ steps.report.outputs.analysis_date }} (${{ steps.report.outputs.tickers }})"
+
+          # 并发冲突时自动重试:pull --rebase 后再 push
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main && git push && exit 0
+            echo "Push 失败,第 $i 次重试 (等待 5-15 秒)..."
+            sleep $((RANDOM % 10 + 5))
+          done
+
+          echo "❌ 多次重试后仍失败"
+          exit 1
