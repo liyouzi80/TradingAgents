@@ -48,7 +48,7 @@ def translate_to_chinese(text: str, max_len: int = 1500) -> str:
             "https://api.deepseek.com/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={
-                "model": "deepseek-chat",
+                "model": "deepseek-v4-flash",
                 "messages": [
                     {
                         "role": "system",
