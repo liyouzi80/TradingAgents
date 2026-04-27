@@ -52,8 +52,8 @@ def build_config() -> dict:
 
     model_map = {
         "deepseek": {
-            "deep": os.getenv("DEEP_THINK_MODEL", "deepseek-v4-pro"),
-            "quick": os.getenv("QUICK_THINK_MODEL", "deepseek-v4-flash"),
+            "deep": os.getenv("DEEP_THINK_MODEL", "deepseek-chat"),
+            "quick": os.getenv("QUICK_THINK_MODEL", "deepseek-chat"),
         },
         "google": {
             "deep": os.getenv("DEEP_THINK_MODEL", "gemini-2.0-flash"),
@@ -67,6 +67,12 @@ def build_config() -> dict:
     models = model_map.get(llm_provider, model_map["deepseek"])
     config["deep_think_llm"] = models["deep"]
     config["quick_think_llm"] = models["quick"]
+
+    # 调试:打印实际使用的模型名(脱敏显示)
+    deep_model = models["deep"]
+    quick_model = models["quick"]
+    print(f"🔍 DEBUG: deep_model = {deep_model[:6]}...{deep_model[-6:] if len(deep_model) > 12 else ''}, len={len(deep_model)}")
+    print(f"🔍 DEBUG: quick_model = {quick_model[:6]}...{quick_model[-6:] if len(quick_model) > 12 else ''}, len={len(quick_model)}")
     config["max_debate_rounds"] = int(os.getenv("MAX_DEBATE_ROUNDS", "1"))
     config["max_risk_discuss_rounds"] = int(os.getenv("MAX_RISK_ROUNDS", "1"))
     config["online_tools"] = True
