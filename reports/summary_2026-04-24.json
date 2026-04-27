@@ -1,6 +1,6 @@
 [
   {
-    "ticker": "TSLL",
+    "ticker": "MU",
     "success": false,
     "final_decision": "Error code: 400 - {'error': {'message': 'The `reasoning_content` in the thinking mode must be passed back to the API.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}",
     "investment_plan": "",
@@ -13,7 +13,7 @@
     "action": "UNKNOWN"
   },
   {
-    "ticker": "TQQQ",
+    "ticker": "MUU",
     "success": false,
     "final_decision": "Error code: 400 - {'error': {'message': 'The `reasoning_content` in the thinking mode must be passed back to the API.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}",
     "investment_plan": "",
@@ -26,7 +26,7 @@
     "action": "UNKNOWN"
   },
   {
-    "ticker": "NVDA",
+    "ticker": "MRVL",
     "success": false,
     "final_decision": "Error code: 400 - {'error': {'message': 'The `reasoning_content` in the thinking mode must be passed back to the API.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}",
     "investment_plan": "",
@@ -39,7 +39,46 @@
     "action": "UNKNOWN"
   },
   {
-    "ticker": "UGL",
+    "ticker": "AMDL",
+    "success": false,
+    "final_decision": "Error code: 400 - {'error': {'message': 'The `reasoning_content` in the thinking mode must be passed back to the API.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}",
+    "investment_plan": "",
+    "trader_plan": "",
+    "market_report": "",
+    "sentiment_report": "",
+    "news_report": "",
+    "fundamentals_report": "",
+    "raw_decision": "Error code: 400 - {'error': {'message': 'The `reasoning_content` in the thinking mode must be passed back to the API.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}",
+    "action": "UNKNOWN"
+  },
+  {
+    "ticker": "DRAM",
+    "success": false,
+    "final_decision": "Error code: 400 - {'error': {'message': 'The `reasoning_content` in the thinking mode must be passed back to the API.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}",
+    "investment_plan": "",
+    "trader_plan": "",
+    "market_report": "",
+    "sentiment_report": "",
+    "news_report": "",
+    "fundamentals_report": "",
+    "raw_decision": "Error code: 400 - {'error': {'message': 'The `reasoning_content` in the thinking mode must be passed back to the API.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}",
+    "action": "UNKNOWN"
+  },
+  {
+    "ticker": "SNXX",
+    "success": false,
+    "final_decision": "Error code: 400 - {'error': {'message': 'The `reasoning_content` in the thinking mode must be passed back to the API.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}",
+    "investment_plan": "",
+    "trader_plan": "",
+    "market_report": "",
+    "sentiment_report": "",
+    "news_report": "",
+    "fundamentals_report": "",
+    "raw_decision": "Error code: 400 - {'error': {'message': 'The `reasoning_content` in the thinking mode must be passed back to the API.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}",
+    "action": "UNKNOWN"
+  },
+  {
+    "ticker": "INTC",
     "success": false,
     "final_decision": "Error code: 400 - {'error': {'message': 'The `reasoning_content` in the thinking mode must be passed back to the API.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_request_error'}}",
     "investment_plan": "",
