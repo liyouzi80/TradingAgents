@@ -52,8 +52,8 @@ def build_config() -> dict:
 
     model_map = {
         "deepseek": {
-            "deep": os.getenv("DEEP_THINK_MODEL", "deepseek-chat"),
-            "quick": os.getenv("QUICK_THINK_MODEL", "deepseek-chat"),
+            "deep": os.getenv("DEEP_THINK_MODEL", "deepseek-v4-pro"),
+            "quick": os.getenv("QUICK_THINK_MODEL", "deepseek-v4-flash"),
         },
         "google": {
             "deep": os.getenv("DEEP_THINK_MODEL", "gemini-2.0-flash"),

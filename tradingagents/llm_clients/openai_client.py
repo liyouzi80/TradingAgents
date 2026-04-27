@@ -1,22 +1,66 @@
 import os
 from typing import Any, Optional
 
+from langchain_core.messages import AIMessage
 from langchain_openai import ChatOpenAI
 
 from .base_client import BaseLLMClient, normalize_content
 from .validators import validate_model
 
+# ── DeepSeek V4 thinking mode compat ──────────────────────────────────────
+# DeepSeek V4's thinking mode returns `reasoning_content` in assistant
+# messages that involved tool calls.  langchain's ChatOpenAI drops this field
+# during message serialisation, causing DeepSeek to respond with 400:
+#   "The reasoning_content in the thinking mode must be passed back to the API."
+#
+# We monkey-patch two internal functions so `reasoning_content` is preserved
+# across the round-trip: response → AIMessage → next API request.
+
+import langchain_openai.chat_models.base as _lc_base
+
+_original_convert_message_to_dict = _lc_base._convert_message_to_dict
+
+
+def _patched_convert_message_to_dict(message, api="chat/completions"):
+    result = _original_convert_message_to_dict(message, api)
+    if isinstance(message, AIMessage):
+        rc = message.additional_kwargs.get("reasoning_content")
+        if rc is not None:
+            result["reasoning_content"] = rc
+    return result
+
+
+_lc_base._convert_message_to_dict = _patched_convert_message_to_dict
+
 
 class NormalizedChatOpenAI(ChatOpenAI):
-    """ChatOpenAI with normalized content output.
+    """ChatOpenAI with normalized content output and DeepSeek V4 thinking mode support.
 
     The Responses API returns content as a list of typed blocks
     (reasoning, text, etc.). This normalizes to string for consistent
     downstream handling.
+
+    Additionally preserves ``reasoning_content`` from DeepSeek V4 responses
+    so it can be passed back in subsequent requests.
     """
 
     def invoke(self, input, config=None, **kwargs):
         return normalize_content(super().invoke(input, config, **kwargs))
+
+    def _create_chat_result(self, response, generation_info=None):
+        result = super()._create_chat_result(response, generation_info)
+        response_dict = (
+            response
+            if isinstance(response, dict)
+            else response.model_dump(
+                exclude={"choices": {"__all__": {"message": {"parsed"}}}}
+            )
+        )
+        for i, choice in enumerate(response_dict.get("choices", [])):
+            rc = choice.get("message", {}).get("reasoning_content")
+            if rc is not None and i < len(result.generations):
+                result.generations[i].message.additional_kwargs["reasoning_content"] = rc
+        return result
 
     def with_structured_output(self, schema, *, method=None, **kwargs):
         """Wrap with structured output, defaulting to function_calling for OpenAI.
@@ -51,6 +95,16 @@ _PROVIDER_CONFIG = {
 }
 
 
+# ── DeepSeek legacy model aliases ──────────────────────────────────────────
+# deepseek-chat and deepseek-reasoner are deprecated (2026/07/24).
+# They transparently route to deepseek-v4-flash with appropriate thinking mode.
+
+_DEEPSEEK_MODEL_ALIASES = {
+    "deepseek-chat": "deepseek-v4-flash",       # → non-thinking mode
+    "deepseek-reasoner": "deepseek-v4-flash",   # → thinking mode (default)
+}
+
+
 class OpenAIClient(BaseLLMClient):
     """Client for OpenAI, Ollama, OpenRouter, and xAI providers.
 
@@ -73,7 +127,21 @@ class OpenAIClient(BaseLLMClient):
     def get_llm(self) -> Any:
         """Return configured ChatOpenAI instance."""
         self.warn_if_unknown_model()
-        llm_kwargs = {"model": self.model}
+
+        # Resolve DeepSeek legacy model aliases transparently
+        model_name = self.model
+        extra_body = {}
+        if self.provider == "deepseek":
+            resolved = _DEEPSEEK_MODEL_ALIASES.get(model_name)
+            if resolved:
+                model_name = resolved
+                if self.model == "deepseek-chat":
+                    extra_body["thinking"] = {"type": "disabled"}
+                # deepseek-reasoner → thinking enabled by default, no extra_body needed
+
+        llm_kwargs = {"model": model_name}
+        if extra_body:
+            llm_kwargs["extra_body"] = extra_body
 
         # Provider-specific base URL and auth
         if self.provider in _PROVIDER_CONFIG:
