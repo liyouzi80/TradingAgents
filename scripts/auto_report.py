@@ -226,12 +226,16 @@ def build_report(results: list[dict], analysis_date: str) -> tuple[str, list[dic
 
 
 def save_report(report: str, summaries: list[dict], analysis_date: str) -> tuple[Path, Path]:
-    """保存 markdown 报告 + JSON 结构化摘要"""
-    md_path = REPORTS_DIR / f"report_{analysis_date}.md"
+    """保存 markdown 报告 + JSON 结构化摘要(文件名带分组,避免并发冲突)"""
+    # 从环境变量取分组名,转成文件名安全的格式
+    group_raw = os.getenv("REPORT_GROUP", "manual")
+    group_slug = group_raw.lower().replace(" ", "-").replace("/", "-")
+
+    md_path = REPORTS_DIR / f"report_{analysis_date}_{group_slug}.md"
     md_path.write_text(report, encoding="utf-8")
     print(f"\n💾 MD 报告已保存: {md_path}")
 
-    json_path = REPORTS_DIR / f"summary_{analysis_date}.json"
+    json_path = REPORTS_DIR / f"summary_{analysis_date}_{group_slug}.json"
     json_path.write_text(json.dumps(summaries, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"💾 JSON 摘要已保存: {json_path}")
 
