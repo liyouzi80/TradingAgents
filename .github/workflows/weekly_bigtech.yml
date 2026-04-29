@@ -50,6 +50,7 @@ jobs:
           QUICK_THINK_MODEL: ${{ secrets.QUICK_THINK_MODEL }}
           MAX_DEBATE_ROUNDS: '1'
           ANALYSIS_DATE: ${{ github.event.inputs.analysis_date }}
+          REPORT_GROUP: 'weekly-bigtech'
         run: |
           python -u scripts/auto_report.py
 
@@ -89,20 +90,16 @@ jobs:
 
           git commit -m "📊 Report: ${{ steps.report.outputs.analysis_date }} (${{ steps.report.outputs.tickers }})"
 
-          # 并发冲突时自动重试:pull --rebase 后再 push
+          # 文件名已带分组,通常不冲突;但仍需处理多 workflow 并发 push
           for i in 1 2 3 4 5; do
-            # 先 stash 掉未跟踪或未 stage 的改动,避免 rebase 失败
             git stash -u -q || true
-
             if git pull --rebase origin main && git push; then
               git stash pop -q 2>/dev/null || true
               exit 0
             fi
-
             git stash pop -q 2>/dev/null || true
             echo "Push 失败,第 $i 次重试 (等待 5-15 秒)..."
             sleep $((RANDOM % 10 + 5))
           done
-
           echo "❌ 多次重试后仍失败"
           exit 1
