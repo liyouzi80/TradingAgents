@@ -1,0 +1,123 @@
+name: 🛢️ Weekly Alternatives (另类资产每周五)
+
+on:
+  # 北京时间每周五 8:30 = UTC 周五 00:30
+  schedule:
+    - cron: '30 0 * * 5'
+  workflow_dispatch:
+    inputs:
+      analysis_date:
+        description: '分析日期 (YYYY-MM-DD，留空则自动)'
+        required: false
+        default: ''
+
+jobs:
+  run:
+    name: 另类资产周报
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install .
+          pip install requests
+
+      - name: Prepare tickers
+        run: |
+          # 从 tickers/alt.txt 读取标的,过滤注释和空行
+          grep -v '^#' tickers/alt.txt | grep -v '^$' > tickers.txt
+          echo "=== Tickers for this run ==="
+          cat tickers.txt
+      - name: Generate trading report
+        id: report
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          DEEP_THINK_MODEL: ${{ secrets.DEEP_THINK_MODEL }}
+          QUICK_THINK_MODEL: ${{ secrets.QUICK_THINK_MODEL }}
+          MAX_DEBATE_ROUNDS: '1'
+          ANALYSIS_DATE: ${{ github.event.inputs.analysis_date }}
+        run: |
+          python -u scripts/auto_report.py
+
+      - name: Send notifications
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          REPORT_PATH: ${{ steps.report.outputs.report_path }}
+          JSON_PATH: ${{ steps.report.outputs.json_path }}
+          ANALYSIS_DATE: ${{ steps.report.outputs.analysis_date }}
+          TICKERS: ${{ steps.report.outputs.tickers }}
+          REPORT_GROUP: 'Alternatives Weekly'
+        run: |
+          python -u scripts/notify.py
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-alt-${{ steps.report.outputs.analysis_date || 'unknown' }}
+          path: reports/
+          retention-days: 30
+
+      - name: Commit reports back to repo
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/
+
+          # 没有变化就跳过
+          git diff --staged --quiet && exit 0
+
+          git commit -m "📊 Report: ${{ steps.report.outputs.analysis_date }} (${{ steps.report.outputs.tickers }})"
+
+          # 并发冲突时自动重试,冲突优先保留本地版本(最新生成的)
+          for i in 1 2 3 4 5; do
+            # 中止任何之前留下的 rebase 状态
+            git rebase --abort 2>/dev/null || true
+
+            # 先 stash 掉未跟踪或未 stage 的改动
+            git stash -u -q || true
+
+            # pull 时如果发生冲突,使用 -X theirs 接受远端,然后用本地报告覆盖
+            if git pull --no-rebase --strategy-option=theirs --no-edit origin main; then
+              # 重新写入本地报告(用我们刚生成的覆盖)
+              git checkout HEAD -- reports/ 2>/dev/null || true
+              git add reports/
+
+              # 如果本次有改动就再 commit
+              if ! git diff --staged --quiet; then
+                git commit --amend --no-edit
+              fi
+
+              if git push; then
+                git stash pop -q 2>/dev/null || true
+                exit 0
+              fi
+            fi
+
+            git stash pop -q 2>/dev/null || true
+            echo "Push 失败,第 $i 次重试 (等待 5-15 秒)..."
+            sleep $((RANDOM % 10 + 5))
+          done
+
+          echo "❌ 多次重试后仍失败"
+          exit 1

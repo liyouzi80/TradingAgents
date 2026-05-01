@@ -1,0 +1,106 @@
+name: 📈 Daily Core (每日核心)
+
+on:
+  # 北京时间每天 8:30 运行 = UTC 00:30，周一到周五
+  schedule:
+    - cron: '30 0 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      analysis_date:
+        description: '分析日期 (YYYY-MM-DD，留空则自动)'
+        required: false
+        default: ''
+
+jobs:
+  run:
+    name: 每日核心分析
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install .
+          pip install requests
+
+      - name: Prepare tickers
+        run: |
+          # 从 tickers/core.txt 读取标的,过滤注释和空行
+          grep -v '^#' tickers/core.txt | grep -v '^$' > tickers.txt
+          echo "=== Tickers for this run ==="
+          cat tickers.txt
+      - name: Generate trading report
+        id: report
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          DEEP_THINK_MODEL: ${{ secrets.DEEP_THINK_MODEL }}
+          QUICK_THINK_MODEL: ${{ secrets.QUICK_THINK_MODEL }}
+          MAX_DEBATE_ROUNDS: '1'
+          ANALYSIS_DATE: ${{ github.event.inputs.analysis_date }}
+          REPORT_GROUP: 'daily-core'
+        run: |
+          python -u scripts/auto_report.py
+
+      - name: Send notifications
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          REPORT_PATH: ${{ steps.report.outputs.report_path }}
+          JSON_PATH: ${{ steps.report.outputs.json_path }}
+          ANALYSIS_DATE: ${{ steps.report.outputs.analysis_date }}
+          TICKERS: ${{ steps.report.outputs.tickers }}
+          REPORT_GROUP: 'Daily Core'
+        run: |
+          python -u scripts/notify.py
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-core-${{ steps.report.outputs.analysis_date || 'unknown' }}
+          path: reports/
+          retention-days: 30
+
+      - name: Commit reports back to repo
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/
+
+          # 没有变化就跳过
+          git diff --staged --quiet && exit 0
+
+          git commit -m "📊 Report: ${{ steps.report.outputs.analysis_date }} (${{ steps.report.outputs.tickers }})"
+
+          # 文件名已带分组,通常不冲突;但仍需处理多 workflow 并发 push
+          for i in 1 2 3 4 5; do
+            git stash -u -q || true
+            if git pull --rebase origin main && git push; then
+              git stash pop -q 2>/dev/null || true
+              exit 0
+            fi
+            git stash pop -q 2>/dev/null || true
+            echo "Push 失败,第 $i 次重试 (等待 5-15 秒)..."
+            sleep $((RANDOM % 10 + 5))
+          done
+          echo "❌ 多次重试后仍失败"
+          exit 1
