@@ -20,15 +20,16 @@ from pathlib import Path
 # ── DeepSeek 翻译 ─────────────────────────────────────────
 _translation_cache = {}
 
-def translate_to_chinese(text: str, max_len: int = 1500) -> str:
-    """使用 DeepSeek 将英文翻译为中文，带简单缓存"""
+def translate_to_chinese(text: str, max_len: int = 1500, *, cn_field: str | None = None, summary: dict | None = None) -> str:
+    """返回中文翻译。优先读取 summary[_cn] 预翻译字段，无则调用 DeepSeek 翻译。"""
+    # 优先使用 auto_report.py 预翻译的 _cn 字段
+    if cn_field and summary and summary.get(cn_field):
+        return summary[cn_field]
+
     if not text or not text.strip():
         return text
 
-    # 截断过长文本（DeepSeek 按 token 计费）
     text = text[:max_len]
-
-    # 检查缓存
     cache_key = hash(text)
     if cache_key in _translation_cache:
         return _translation_cache[cache_key]
@@ -128,7 +129,7 @@ def format_ticker_message(summary: dict, analysis_date: str, group: str) -> str:
         if reasons_raw:
             # 合并后一起翻译，减少 API 调用
             joined = "\n---\n".join(reasons_raw)
-            translated = translate_to_chinese(joined, max_len=1200)
+            translated = translate_to_chinese(joined, max_len=1200, cn_field="final_decision_cn", summary=summary)
             reasons_cn = translated.split("\n---\n") if "---" in translated else [translated]
 
             lines.append("🎯 *核心理由*:")
@@ -140,7 +141,7 @@ def format_ticker_message(summary: dict, analysis_date: str, group: str) -> str:
     # 多空辩论
     if summary.get("investment_plan"):
         print(f"  🔤 翻译 {ticker} 多空辩论...")
-        plan_cn = translate_to_chinese(summary["investment_plan"][:500], max_len=500)
+        plan_cn = translate_to_chinese(summary.get("investment_plan", "")[:500], max_len=500, cn_field="investment_plan_cn", summary=summary)
         excerpt = plan_cn.replace('*', '').replace('_', '')
         if excerpt:
             lines.append("⚔️ *多空辩论要点*:")
@@ -150,7 +151,7 @@ def format_ticker_message(summary: dict, analysis_date: str, group: str) -> str:
     # 交易计划
     if summary.get("trader_plan"):
         print(f"  🔤 翻译 {ticker} 交易计划...")
-        trader_cn = translate_to_chinese(summary["trader_plan"][:400], max_len=400)
+        trader_cn = translate_to_chinese(summary.get("trader_plan", "")[:400], max_len=400, cn_field="trader_plan_cn", summary=summary)
         trader_excerpt = trader_cn.replace('*', '').replace('_', '')
         if trader_excerpt:
             lines.append("📋 *交易计划*:")
@@ -238,7 +239,7 @@ def format_feishu_card(summary: dict, analysis_date: str, group: str) -> dict:
         reasons_raw = extract_key_reasons(summary["final_decision"], max_points=4)
         if reasons_raw:
             joined = "\n---\n".join(reasons_raw)
-            translated = translate_to_chinese(joined, max_len=1200)
+            translated = translate_to_chinese(joined, max_len=1200, cn_field="final_decision_cn", summary=summary)
             reasons_cn = translated.split("\n---\n") if "---" in translated else [translated]
 
             content = "**🎯 核心理由**\n" + "\n".join(f"{i}. {r.strip()}" for i, r in enumerate(reasons_cn[:4], 1))
@@ -247,7 +248,7 @@ def format_feishu_card(summary: dict, analysis_date: str, group: str) -> dict:
 
     # 多空辩论
     if summary.get("investment_plan"):
-        plan_cn = translate_to_chinese(summary["investment_plan"][:500], max_len=500)
+        plan_cn = translate_to_chinese(summary.get("investment_plan", "")[:500], max_len=500, cn_field="investment_plan_cn", summary=summary)
         elements.append({
             "tag": "div",
             "text": {"tag": "lark_md", "content": f"**⚔️ 多空辩论**\n{plan_cn}"}
@@ -256,7 +257,7 @@ def format_feishu_card(summary: dict, analysis_date: str, group: str) -> dict:
 
     # 交易计划
     if summary.get("trader_plan"):
-        trader_cn = translate_to_chinese(summary["trader_plan"][:400], max_len=400)
+        trader_cn = translate_to_chinese(summary.get("trader_plan", "")[:400], max_len=400, cn_field="trader_plan_cn", summary=summary)
         elements.append({
             "tag": "div",
             "text": {"tag": "lark_md", "content": f"**📋 交易计划**\n{trader_cn}"}

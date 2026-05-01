@@ -444,9 +444,6 @@ function renderSummary(entries) {
 
   document.getElementById('summary').innerHTML = `
     <div class="summary-card">
-      <div class="label">总决策数</div><div class="value">${total}</div>
-    </div>
-    <div class="summary-card">
       <div class="label">买入</div><div class="value buy">${buy}</div>
     </div>
     <div class="summary-card">
@@ -614,17 +611,35 @@ function openModal(el) {
     `${date}${entry.variant !== 'standard' ? ` · ${entry.variant}` : ''} · 评级: ${entry.raw_decision || '—'}`;
 
   let body = '';
-  if (entry.final_decision) {
+  if (entry.final_decision_cn || entry.final_decision) {
     body += '<h3>裁决理由</h3>';
-    body += `<div class="content-block">${escapeHtml(entry.final_decision)}</div>`;
+    if (entry.final_decision_cn) {
+      body += `<div class="content-block">${escapeHtml(entry.final_decision_cn)}</div>`;
+    }
+    if (entry.final_decision) {
+      body += `<details><summary style="cursor:pointer;font-size:13px;color:var(--text-secondary)">查看原文</summary>`;
+      body += `<div class="content-block" style="margin-top:8px">${escapeHtml(entry.final_decision)}</div></details>`;
+    }
   }
-  if (entry.investment_plan) {
+  if (entry.investment_plan_cn || entry.investment_plan) {
     body += '<h3>投资计划</h3>';
-    body += `<div class="content-block">${escapeHtml(entry.investment_plan)}</div>`;
+    if (entry.investment_plan_cn) {
+      body += `<div class="content-block">${escapeHtml(entry.investment_plan_cn)}</div>`;
+    }
+    if (entry.investment_plan) {
+      body += `<details><summary style="cursor:pointer;font-size:13px;color:var(--text-secondary)">查看原文</summary>`;
+      body += `<div class="content-block" style="margin-top:8px">${escapeHtml(entry.investment_plan)}</div></details>`;
+    }
   }
-  if (entry.trader_plan) {
+  if (entry.trader_plan_cn || entry.trader_plan) {
     body += '<h3>交易员计划</h3>';
-    body += `<div class="content-block">${escapeHtml(entry.trader_plan)}</div>`;
+    if (entry.trader_plan_cn) {
+      body += `<div class="content-block">${escapeHtml(entry.trader_plan_cn)}</div>`;
+    }
+    if (entry.trader_plan) {
+      body += `<details><summary style="cursor:pointer;font-size:13px;color:var(--text-secondary)">查看原文</summary>`;
+      body += `<div class="content-block" style="margin-top:8px">${escapeHtml(entry.trader_plan)}</div></details>`;
+    }
   }
 
   document.getElementById('modalBody').innerHTML = body;

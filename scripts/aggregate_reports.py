@@ -88,8 +88,11 @@ def aggregate(reports_dir):
                 'action': normalize_action(item.get('action'), item.get('raw_decision')),
                 'raw_decision': item.get('raw_decision', ''),
                 'final_decision': item.get('final_decision', ''),
+                'final_decision_cn': item.get('final_decision_cn', ''),
                 'investment_plan': item.get('investment_plan', ''),
+                'investment_plan_cn': item.get('investment_plan_cn', ''),
                 'trader_plan': item.get('trader_plan', ''),
+                'trader_plan_cn': item.get('trader_plan_cn', ''),
             })
 
     return entries

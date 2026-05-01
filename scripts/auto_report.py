@@ -7,6 +7,7 @@ import os
 import sys
 import copy
 import json
+import requests
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -98,6 +99,45 @@ def analyze_ticker(ticker: str, analysis_date: str, config: dict) -> dict:
         return {"ticker": ticker, "success": False, "decision": str(e), "state": {}}
 
 
+def translate_summary_fields(summaries: list[dict]):
+    """将每个标的的核心理由/多空辩论/交易计划翻译为中文，写入 _cn 字段"""
+    api_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return
+
+    for s in summaries:
+        for field in ["final_decision", "investment_plan", "trader_plan"]:
+            text = s.get(field, "")
+            if not text or not text.strip():
+                continue
+            # 已有中文则跳过
+            chinese_chars = sum(1 for c in text if '一' <= c <= '鿿')
+            if chinese_chars / max(len(text), 1) > 0.3:
+                s[f"{field}_cn"] = text
+                continue
+            try:
+                resp = requests.post(
+                    "https://api.deepseek.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    json={
+                        "model": "deepseek-v4-flash",
+                        "messages": [
+                            {"role": "system", "content": "你是专业的金融翻译专家。将英文金融分析内容准确翻译为简体中文。要求：1) 专业术语准确（Underweight→减持, MACD histogram→MACD柱状图, Bollinger Bands→布林带, stop loss→止损, position sizing→仓位管理, hawkish→鹰派, bullish→看涨）；2) 股票代码、数字、百分比保持原样；3) 保持原始 Markdown 格式（**, 列表等）；4) 只输出译文，不要解释。"},
+                            {"role": "user", "content": f"翻译以下金融分析为中文：\n\n{text}"},
+                        ],
+                        "temperature": 0.3,
+                        "max_tokens": 4096,
+                    },
+                    timeout=120,
+                )
+                if resp.status_code == 200:
+                    s[f"{field}_cn"] = resp.json()["choices"][0]["message"]["content"].strip()
+                else:
+                    print(f"  ⚠️ 翻译 {s['ticker']} {field} 失败: {resp.status_code}")
+            except Exception as e:
+                print(f"  ⚠️ 翻译 {s['ticker']} {field} 异常: {e}")
+
+
 def extract_ticker_summary(result: dict) -> dict:
     """从 state 中提取关键字段，供推送脚本使用"""
     ticker = result["ticker"]
@@ -164,6 +204,9 @@ def build_report(results: list[dict], analysis_date: str) -> tuple[str, list[dic
     # 为每个摘要补充 action
     for s in summaries:
         s["action"] = extract_action(s["final_decision"])
+
+    # 翻译为中文（如有 DEEPSEEK_API_KEY）
+    translate_summary_fields(summaries)
 
     # 生成 markdown
     lines = [
