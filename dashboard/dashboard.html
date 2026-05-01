@@ -294,10 +294,11 @@ const REPORT_DATES = [
   { date: '2026-05-01', variant: 'daily-core' },
   { date: '2026-05-01', variant: 'manual' },
 ];
-const REPORTS_BASE = '';
+const REPORTS_BASE = '../reports';
 
 // ===== DATA LOADING =====
 let allEntries = [];
+let visibleTickers = new Set();
 let activeVariant = 'all';
 let activeView = 'matrix';
 
@@ -307,16 +308,23 @@ function getFilename(date, variant) {
 }
 
 async function loadFromAggregated() {
-  const url = REPORTS_BASE ? `${REPORTS_BASE}/dashboard_data.json` : 'dashboard_data.json';
+  const url = 'dashboard_data.json';
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  return await resp.json();
+  const data = await resp.json();
+  // New format: { entries: [...], visible_tickers: [...] }
+  // Old format: plain array
+  if (data.entries) {
+    visibleTickers = new Set(data.visible_tickers || []);
+    return data.entries;
+  }
+  return data;
 }
 
 async function loadFromIndividualFiles() {
   const promises = REPORT_DATES.map(async ({ date, variant }) => {
     const filename = getFilename(date, variant);
-    const url = REPORTS_BASE ? `${REPORTS_BASE}/${filename}` : filename;
+    const url = `${REPORTS_BASE}/${filename}`;
     try {
       const resp = await fetch(url);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -338,12 +346,33 @@ async function loadFromIndividualFiles() {
   return (await Promise.all(promises)).flat();
 }
 
+async function loadTickerWhitelist() {
+  const tickerFiles = ['../tickers.txt', '../tickers/core.txt', '../tickers/alt.txt', '../tickers/bigtech.txt', '../tickers/semi.txt'];
+  const tickers = new Set();
+  for (const fname of tickerFiles) {
+    try {
+      const resp = await fetch(fname);
+      if (!resp.ok) continue;
+      const text = await resp.text();
+      for (let line of text.split('\n')) {
+        line = line.trim();
+        if (line && !line.startsWith('#')) tickers.add(line.toUpperCase());
+      }
+    } catch {}
+  }
+  return tickers;
+}
+
 async function loadReports() {
   try {
     allEntries = await loadFromAggregated();
+    if (visibleTickers.size === 0) {
+      visibleTickers = await loadTickerWhitelist();
+    }
   } catch {
     console.log('No dashboard_data.json found, loading individual files...');
     allEntries = await loadFromIndividualFiles();
+    visibleTickers = await loadTickerWhitelist();
   }
   render();
 }
@@ -359,6 +388,10 @@ function normalizeAction(action, rawDecision) {
 // ===== FILTERING =====
 function getFilteredEntries() {
   let entries = allEntries;
+  // Filter by whitelist — only show tickers present in ticker config files
+  if (visibleTickers.size > 0) {
+    entries = entries.filter(e => visibleTickers.has(e.ticker));
+  }
   if (activeVariant !== 'all') entries = entries.filter(e => e.variant === activeVariant);
   const tf = document.getElementById('tickerFilter')?.value;
   if (tf && tf !== 'all') entries = entries.filter(e => e.ticker === tf);

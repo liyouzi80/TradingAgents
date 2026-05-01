@@ -5,8 +5,9 @@ on:
     branches: [main]
     paths:
       - 'reports/summary_*.json'
-      - 'reports/dashboard.html'
-      - 'reports/aggregate_reports.py'
+      - 'dashboard/**'
+      - 'scripts/aggregate_reports.py'
+      - 'tickers/**'
       - '.github/workflows/deploy-dashboard.yml'
   workflow_dispatch:
 
@@ -28,11 +29,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - run: python3 reports/aggregate_reports.py reports/
+      - name: Aggregate reports
+        run: python3 scripts/aggregate_reports.py reports/ dashboard/
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp dashboard/* _site/
+          cp reports/summary_*.json _site/
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: reports
+          path: _site
 
       - id: deploy
         uses: actions/deploy-pages@v4
