@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradingAgents 决策仪表盘</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --card-bg: #fff;
+    --text: #1a1a2e;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --buy: #10b981;
+    --buy-bg: #ecfdf5;
+    --sell: #ef4444;
+    --sell-bg: #fef2f2;
+    --hold: #f59e0b;
+    --hold-bg: #fffbeb;
+    --unknown: #9ca3af;
+    --unknown-bg: #f3f4f6;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    padding: 24px; min-height: 100vh;
+  }
+  .container { max-width: 1300px; margin: 0 auto; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; }
+
+  /* Summary cards */
+  .summary-row {
+    display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .summary-card {
+    background: var(--card-bg); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 14px 20px; min-width: 110px; flex: 1;
+  }
+  .summary-card .label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px; }
+  .summary-card .value { font-size: 24px; font-weight: 700; margin-top: 2px; }
+  .summary-card .value.buy { color: var(--buy); }
+  .summary-card .value.sell { color: var(--sell); }
+  .summary-card .value.hold { color: var(--hold); }
+
+  /* Filters */
+  .filters {
+    display: flex; gap: 12px; margin-bottom: 16px;
+    flex-wrap: wrap; align-items: center;
+  }
+  .filters label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+  .filters select, .filters button {
+    padding: 6px 14px; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 13px; background: var(--card-bg);
+    cursor: pointer;
+  }
+  .variant-toggle {
+    display: flex; gap: 4px;
+    background: var(--border); border-radius: 8px; padding: 3px;
+  }
+  .variant-toggle button {
+    border: none; background: transparent;
+    padding: 5px 14px; border-radius: 6px;
+    font-size: 12px; cursor: pointer; font-weight: 500;
+    transition: all .15s;
+  }
+  .variant-toggle button.active {
+    background: var(--card-bg); box-shadow: 0 1px 2px rgba(0,0,0,.1);
+  }
+  .view-toggle {
+    display: flex; gap: 4px;
+    background: var(--border); border-radius: 8px; padding: 3px;
+    margin-left: auto;
+  }
+  .view-toggle button {
+    border: none; background: transparent;
+    padding: 5px 14px; border-radius: 6px;
+    font-size: 12px; cursor: pointer; font-weight: 500;
+    transition: all .15s;
+  }
+  .view-toggle button.active {
+    background: var(--card-bg); box-shadow: 0 1px 2px rgba(0,0,0,.1);
+  }
+
+  /* Table */
+  .table-wrap {
+    background: var(--card-bg); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow-x: auto;
+  }
+  table {
+    width: 100%; border-collapse: collapse; min-width: 700px;
+  }
+  th {
+    padding: 12px 14px; text-align: left;
+    font-size: 11px; font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: .5px;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+    position: sticky; top: 0; background: var(--card-bg);
+  }
+  td {
+    padding: 10px 14px; font-size: 13px;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f9fafb; }
+  .ticker-cell { font-weight: 600; }
+  .date-header { text-align: center; }
+  .date-header .variant-tag {
+    display: block; font-size: 10px; font-weight: 400;
+    color: var(--text-secondary); text-transform: none; letter-spacing: 0;
+  }
+  td.decision-cell { text-align: center; }
+
+  /* Badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 2px;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer;
+    transition: transform .1s, box-shadow .1s;
+  }
+  .badge:hover { transform: scale(1.05); box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+  .badge.buy    { background: var(--buy-bg); color: var(--buy); }
+  .badge.sell   { background: var(--sell-bg); color: var(--sell); }
+  .badge.hold   { background: var(--hold-bg); color: var(--hold); }
+
+  /* Change arrow */
+  .change-arrow { font-size: 14px; margin-left: 2px; }
+  .change-arrow.upgrade   { color: var(--buy); }
+  .change-arrow.downgrade { color: var(--sell); }
+  .change-arrow.neutral   { color: var(--text-secondary); }
+
+  /* Trend mini-timeline */
+  .mini-timeline { display: flex; gap: 3px; align-items: center; }
+  .mini-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    cursor: pointer; transition: transform .1s;
+  }
+  .mini-dot:hover { transform: scale(1.4); }
+  .mini-dot.buy  { background: var(--buy); }
+  .mini-dot.sell { background: var(--sell); }
+  .mini-dot.hold { background: var(--hold); }
+  .mini-dot.no-data { background: var(--border); }
+
+  /* Timeline view */
+  .timeline-card {
+    background: var(--card-bg); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px 20px; margin-bottom: 12px;
+  }
+  .timeline-card .ticker-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+  }
+  .timeline-card .ticker-name { font-size: 16px; font-weight: 700; }
+  .timeline-track {
+    display: flex; align-items: center; gap: 0;
+    position: relative; padding: 8px 0;
+    overflow-x: auto;
+  }
+  .timeline-node {
+    display: flex; flex-direction: column; align-items: center;
+    min-width: 90px; position: relative;
+  }
+  .timeline-node::before {
+    content: '';
+    position: absolute; top: 22px; left: 50%; right: -50%;
+    height: 3px; background: var(--border);
+  }
+  .timeline-node:last-child::before { display: none; }
+  .timeline-node .node-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    z-index: 1; cursor: pointer;
+    transition: transform .15s; position: relative;
+  }
+  .timeline-node .node-dot:hover { transform: scale(1.2); }
+  .timeline-node .node-dot.buy  { background: var(--buy); box-shadow: 0 0 0 3px var(--buy-bg); }
+  .timeline-node .node-dot.sell { background: var(--sell); box-shadow: 0 0 0 3px var(--sell-bg); }
+  .timeline-node .node-dot.hold { background: var(--hold); box-shadow: 0 0 0 3px var(--hold-bg); }
+  .timeline-node .node-date {
+    font-size: 10px; color: var(--text-secondary); margin-top: 6px;
+  }
+  .timeline-node .node-action {
+    font-size: 11px; font-weight: 600; margin-top: 2px;
+  }
+  .timeline-node .node-action.buy  { color: var(--buy); }
+  .timeline-node .node-action.sell { color: var(--sell); }
+  .timeline-node .node-action.hold { color: var(--hold); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.4); z-index: 1000;
+    justify-content: center; align-items: flex-start;
+    padding: 40px 20px; overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--card-bg); border-radius: var(--radius);
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    max-width: 720px; width: 100%;
+    max-height: 85vh; overflow-y: auto;
+  }
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-start;
+    position: sticky; top: 0; background: var(--card-bg); z-index: 1;
+  }
+  .modal-header h2 { font-size: 18px; }
+  .modal-header .meta { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+  .modal-close {
+    border: none; background: none; font-size: 22px; cursor: pointer;
+    color: var(--text-secondary); padding: 4px 8px; border-radius: 6px;
+  }
+  .modal-close:hover { background: var(--border); }
+  .modal-body { padding: 20px 24px; }
+  .modal-body h3 {
+    font-size: 14px; font-weight: 600; margin: 16px 0 8px;
+    color: var(--text); padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+  .modal-body h3:first-child { margin-top: 0; }
+  .modal-body .content-block {
+    font-size: 14px; line-height: 1.65; color: var(--text-secondary);
+    margin-bottom: 8px; white-space: pre-wrap; word-break: break-word;
+  }
+
+  .loading { text-align: center; padding: 60px; color: var(--text-secondary); font-size: 15px; }
+  .spinner {
+    display: inline-block; width: 32px; height: 32px;
+    border: 3px solid var(--border); border-top-color: var(--text-secondary);
+    border-radius: 50%; animation: spin .6s linear infinite; margin-bottom: 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
+
+  @media (max-width: 768px) {
+    body { padding: 12px; }
+    .summary-row { gap: 6px; }
+    .summary-card { padding: 10px 14px; min-width: 80px; }
+    .summary-card .value { font-size: 20px; }
+    th, td { padding: 8px 10px; font-size: 12px; }
+    .timeline-node { min-width: 70px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>TradingAgents 决策仪表盘</h1>
+  <p class="subtitle">按标的统计每日交易决策，点击决策查看详细理由。支持矩阵视图和时间线视图切换。</p>
+
+  <div class="summary-row" id="summary"></div>
+
+  <div class="filters">
+    <label>报告类型:</label>
+    <div class="variant-toggle" id="variantToggle"></div>
+    <label style="margin-left:12px">标的:</label>
+    <select id="tickerFilter"><option value="all">全部</option></select>
+    <div class="view-toggle">
+      <button class="active" data-view="matrix">矩阵视图</button>
+      <button data-view="timeline">时间线视图</button>
+    </div>
+  </div>
+
+  <div id="mainArea">
+    <div class="loading"><div class="spinner"></div><div>正在加载报告数据...</div></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2 id="modalTitle"></h2>
+        <div class="meta" id="modalMeta"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ===== CONFIGURATION =====
+const REPORT_DATES = [
+  { date: '2026-04-24', variant: 'standard' },
+  { date: '2026-04-28', variant: 'standard' },
+  { date: '2026-04-29', variant: 'standard' },
+  { date: '2026-04-30', variant: 'daily-core' },
+  { date: '2026-05-01', variant: 'daily-core' },
+  { date: '2026-05-01', variant: 'manual' },
+];
+const REPORTS_BASE = '';
+
+// ===== DATA LOADING =====
+let allEntries = [];
+let activeVariant = 'all';
+let activeView = 'matrix';
+
+function getFilename(date, variant) {
+  const suffix = variant === 'standard' ? '' : `_${variant}`;
+  return `summary_${date}${suffix}.json`;
+}
+
+async function loadFromAggregated() {
+  const url = REPORTS_BASE ? `${REPORTS_BASE}/dashboard_data.json` : 'dashboard_data.json';
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return await resp.json();
+}
+
+async function loadFromIndividualFiles() {
+  const promises = REPORT_DATES.map(async ({ date, variant }) => {
+    const filename = getFilename(date, variant);
+    const url = REPORTS_BASE ? `${REPORTS_BASE}/${filename}` : filename;
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const items = await resp.json();
+      return items.filter(item => item.success).map(item => ({
+        date, variant,
+        ticker: item.ticker,
+        action: normalizeAction(item.action, item.raw_decision),
+        raw_decision: item.raw_decision || '',
+        final_decision: item.final_decision || '',
+        investment_plan: item.investment_plan || '',
+        trader_plan: item.trader_plan || '',
+      }));
+    } catch (err) {
+      console.warn(`Failed to load ${filename}: ${err.message}`);
+      return [];
+    }
+  });
+  return (await Promise.all(promises)).flat();
+}
+
+async function loadReports() {
+  try {
+    allEntries = await loadFromAggregated();
+  } catch {
+    console.log('No dashboard_data.json found, loading individual files...');
+    allEntries = await loadFromIndividualFiles();
+  }
+  render();
+}
+
+function normalizeAction(action, rawDecision) {
+  if (action && action !== 'UNKNOWN') return action;
+  const rd = (rawDecision || '').toLowerCase();
+  if (/overweight|buy/.test(rd)) return 'BUY';
+  if (/underweight|sell/.test(rd)) return 'SELL';
+  return 'HOLD';
+}
+
+// ===== FILTERING =====
+function getFilteredEntries() {
+  let entries = allEntries;
+  if (activeVariant !== 'all') entries = entries.filter(e => e.variant === activeVariant);
+  const tf = document.getElementById('tickerFilter')?.value;
+  if (tf && tf !== 'all') entries = entries.filter(e => e.ticker === tf);
+  return entries;
+}
+
+function getMatrix(entries) {
+  const dates = [...new Set(entries.map(e => e.date))].sort();
+  const tickers = [...new Set(entries.map(e => e.ticker))].sort();
+  const matrix = {};
+  for (const e of entries) {
+    const key = `${e.ticker}|${e.date}`;
+    if (!matrix[key] || (e.variant === 'standard' && matrix[key].variant !== 'standard')) {
+      matrix[key] = e;
+    }
+  }
+  return { dates, tickers, matrix };
+}
+
+// ===== RENDERING =====
+function render() {
+  const entries = getFilteredEntries();
+  if (entries.length === 0) {
+    document.getElementById('mainArea').innerHTML =
+      '<div class="empty">没有找到报告数据。请确保 summary_*.json 文件在 reports 目录中。</div>';
+    return;
+  }
+  renderSummary(entries);
+  renderVariantToggle();
+  renderTickerFilter(entries);
+  if (activeView === 'matrix') renderMatrix(entries);
+  else renderTimeline(entries);
+}
+
+function renderSummary(entries) {
+  const buy = entries.filter(e => e.action === 'BUY').length;
+  const sell = entries.filter(e => e.action === 'SELL').length;
+  const hold = entries.filter(e => e.action === 'HOLD').length;
+  const total = buy + sell + hold;
+
+  // Calculate recent trend (last 2 days vs previous)
+  const dates = [...new Set(entries.map(e => e.date))].sort();
+  const recentDates = dates.slice(-2);
+  const olderDates = dates.slice(0, -2);
+  const recentEntries = entries.filter(e => recentDates.includes(e.date));
+  const olderEntries = entries.filter(e => olderDates.includes(e.date));
+  const recentBuyPct = recentEntries.length ? (recentEntries.filter(e => e.action === 'BUY').length / recentEntries.length * 100) : 0;
+  const olderBuyPct = olderEntries.length ? (olderEntries.filter(e => e.action === 'BUY').length / olderEntries.length * 100) : 0;
+  const sentimentTrend = recentBuyPct > olderBuyPct + 10 ? '↑ 偏多' : recentBuyPct < olderBuyPct - 10 ? '↓ 偏空' : '→ 持平';
+
+  document.getElementById('summary').innerHTML = `
+    <div class="summary-card">
+      <div class="label">总决策数</div><div class="value">${total}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">买入</div><div class="value buy">${buy}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">卖出</div><div class="value sell">${sell}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">持有</div><div class="value hold">${hold}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">市场情绪</div>
+      <div class="value" style="font-size:18px;color:${sentimentTrend.includes('偏多') ? 'var(--buy)' : sentimentTrend.includes('偏空') ? 'var(--sell)' : 'var(--text-secondary)'}">${sentimentTrend}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">覆盖标的</div><div class="value">${new Set(entries.map(e => e.ticker)).size}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">交易日</div><div class="value">${dates.length}</div>
+    </div>
+  `;
+}
+
+function renderVariantToggle() {
+  const variants = ['all', ...new Set(allEntries.map(e => e.variant))];
+  const toggle = document.getElementById('variantToggle');
+  toggle.innerHTML = variants.map(v => {
+    const label = v === 'all' ? '全部' : v;
+    const cls = activeVariant === v ? 'active' : '';
+    return `<button class="${cls}" data-variant="${v}">${label}</button>`;
+  }).join('');
+  toggle.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => { activeVariant = btn.dataset.variant; render(); });
+  });
+}
+
+function renderTickerFilter(entries) {
+  const tickers = [...new Set(allEntries.map(e => e.ticker))].sort();
+  const select = document.getElementById('tickerFilter');
+  select.innerHTML = '<option value="all">全部</option>' +
+    tickers.map(t => `<option value="${t}">${t}</option>`).join('');
+  select.onchange = () => render();
+}
+
+function getDecisionChange(prev, curr) {
+  if (!prev || !curr) return '';
+  const score = { BUY: 2, HOLD: 1, SELL: 0 };
+  const diff = score[curr.action] - score[prev.action];
+  if (diff > 0) return '<span class="change-arrow upgrade">↑</span>';
+  if (diff < 0) return '<span class="change-arrow downgrade">↓</span>';
+  return '<span class="change-arrow neutral">→</span>';
+}
+
+// ===== MATRIX VIEW =====
+function renderMatrix(entries) {
+  const { dates, tickers, matrix } = getMatrix(entries);
+  const allDates = [...new Set(allEntries.map(e => e.date))].sort();
+
+  let html = '<div class="table-wrap"><table>';
+  html += '<thead><tr><th>标的</th><th>趋势</th>';
+  for (const date of dates) {
+    const variants = [...new Set(entries.filter(e => e.date === date).map(e => e.variant))];
+    const tag = variants.length === 1 && variants[0] !== 'standard'
+      ? `<span class="variant-tag">${variants[0]}</span>` : '';
+    html += `<th class="date-header">${date}${tag}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  for (const ticker of tickers) {
+    // Build mini timeline from all available data
+    const tickerHistory = allDates.map(d => {
+      const e = allEntries.find(x => x.ticker === ticker && x.date === d);
+      return e ? e.action.toLowerCase() : null;
+    });
+
+    html += '<tr>';
+    html += `<td class="ticker-cell">${ticker}</td>`;
+    html += `<td><div class="mini-timeline">${tickerHistory.map(a =>
+      `<span class="mini-dot ${a || 'no-data'}"
+             title="${a ? actionLabel(a.toUpperCase()) : '无数据'}"
+             style="cursor:${a ? 'pointer' : 'default'}"></span>`
+    ).join('')}</div></td>`;
+
+    let prevEntry = null;
+    for (const date of dates) {
+      const entry = matrix[`${ticker}|${date}`];
+      if (entry) {
+        const change = getDecisionChange(
+          prevEntry,
+          entry
+        );
+        const hasRationale = entry.final_decision || entry.investment_plan;
+        html += `<td class="decision-cell">
+          <span class="badge ${entry.action.toLowerCase()}"
+                data-has-rationale="${!!hasRationale}"
+                data-ticker="${entry.ticker}"
+                data-date="${entry.date}"
+                data-variant="${entry.variant}"
+                onclick="openModal(this)">
+            ${actionLabel(entry.action)}${change}
+          </span>
+        </td>`;
+        prevEntry = entry;
+      } else {
+        html += '<td class="decision-cell"><span style="color:var(--unknown)">—</span></td>';
+        prevEntry = null;
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  document.getElementById('mainArea').innerHTML = html;
+}
+
+// ===== TIMELINE VIEW =====
+function renderTimeline(entries) {
+  const { dates, tickers, matrix } = getMatrix(entries);
+  let html = '';
+
+  for (const ticker of tickers) {
+    const tickerEntries = dates.map(d => matrix[`${ticker}|${d}`]).filter(Boolean);
+    if (tickerEntries.length === 0) continue;
+
+    html += `<div class="timeline-card">
+      <div class="ticker-header">
+        <span class="ticker-name">${ticker}</span>
+        <span style="font-size:12px;color:var(--text-secondary)">${tickerEntries.length} 个交易日</span>
+      </div>
+      <div class="timeline-track">`;
+
+    for (const entry of tickerEntries) {
+      html += `<div class="timeline-node">
+        <div class="node-dot ${entry.action.toLowerCase()}"
+             data-ticker="${entry.ticker}"
+             data-date="${entry.date}"
+             data-variant="${entry.variant}"
+             onclick="openModal(this)"
+             title="${actionLabel(entry.action)}"></div>
+        <div class="node-date">${entry.date.slice(5)}</div>
+        <div class="node-action ${entry.action.toLowerCase()}">${actionLabel(entry.action)}</div>
+      </div>`;
+    }
+
+    html += '</div></div>';
+  }
+
+  document.getElementById('mainArea').innerHTML = html || '<div class="empty">无数据</div>';
+}
+
+function actionLabel(action) {
+  const map = { BUY: '买入', SELL: '卖出', HOLD: '持有' };
+  return map[action] || action;
+}
+
+// ===== MODAL =====
+function openModal(el) {
+  const ticker = el.dataset.ticker;
+  const date = el.dataset.date;
+  const variant = el.dataset.variant;
+  const entry = allEntries.find(
+    e => e.ticker === ticker && e.date === date && e.variant === variant
+  );
+  if (!entry) return;
+
+  document.getElementById('modalTitle').textContent = `${ticker} · ${actionLabel(entry.action)}`;
+  document.getElementById('modalMeta').textContent =
+    `${date}${entry.variant !== 'standard' ? ` · ${entry.variant}` : ''} · 评级: ${entry.raw_decision || '—'}`;
+
+  let body = '';
+  if (entry.final_decision) {
+    body += '<h3>裁决理由</h3>';
+    body += `<div class="content-block">${escapeHtml(entry.final_decision)}</div>`;
+  }
+  if (entry.investment_plan) {
+    body += '<h3>投资计划</h3>';
+    body += `<div class="content-block">${escapeHtml(entry.investment_plan)}</div>`;
+  }
+  if (entry.trader_plan) {
+    body += '<h3>交易员计划</h3>';
+    body += `<div class="content-block">${escapeHtml(entry.trader_plan)}</div>`;
+  }
+
+  document.getElementById('modalBody').innerHTML = body;
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// View toggle
+document.querySelectorAll('.view-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeView = btn.dataset.view;
+    render();
+  });
+});
+
+// ===== INIT =====
+loadReports();
+</script>
+</body>
+</html>
