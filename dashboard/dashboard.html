@@ -1067,7 +1067,10 @@ function toggleDrawer(action) {
 
 function openDrawer(action) {
   activeDrawer = action;
-  const entries = getFilteredEntries().filter(e => e.action === action);
+  const allActionEntries = getFilteredEntries().filter(e => e.action === action);
+  // Only show the latest date
+  const latestDate = [...new Set(allActionEntries.map(e => e.date))].sort().pop();
+  const entries = allActionEntries.filter(e => e.date === latestDate);
   const drawer = document.getElementById('kpiDrawer');
   const title = document.getElementById('drawerTitle');
   const count = document.getElementById('drawerCount');
@@ -1077,7 +1080,7 @@ function openDrawer(action) {
   const colors = { BUY: 'var(--buy)', SELL: 'var(--sell)', HOLD: 'var(--hold)' };
 
   title.innerHTML = `<span class="action-dot ${action.toLowerCase()}" style="display:inline-block;width:10px;height:10px;top:0"></span> <span style="color:${colors[action]}">${labels[action]}</span> 信号标的`;
-  count.textContent = `${entries.length} 个标的 · ${[...new Set(entries.map(e => e.date))].join(', ')}`;
+  count.textContent = `${entries.length} 个标的 · ${latestDate}`;
 
   if (entries.length === 0) {
     grid.innerHTML = '<div style="padding:20px;color:var(--text-tertiary);text-align:center">无匹配标的</div>';
