@@ -4,273 +4,627 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TradingAgents 决策仪表盘</title>
+<meta name="description" content="TradingAgents multi-agent trading decision dashboard — daily BUY/SELL/HOLD signals across tracked tickers.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #f8f9fa;
-    --card-bg: #fff;
-    --text: #1a1a2e;
-    --text-secondary: #6b7280;
-    --border: #e5e7eb;
-    --buy: #10b981;
-    --buy-bg: #ecfdf5;
-    --sell: #ef4444;
-    --sell-bg: #fef2f2;
-    --hold: #f59e0b;
-    --hold-bg: #fffbeb;
-    --unknown: #9ca3af;
-    --unknown-bg: #f3f4f6;
-    --radius: 10px;
-    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg); color: var(--text);
-    padding: 24px; min-height: 100vh;
-  }
-  .container { max-width: 1300px; margin: 0 auto; }
-  h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
-  .subtitle { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; }
+/* ============================================================
+   TradingAgents Dashboard — Design System
+   ============================================================ */
 
-  /* Summary cards */
+/* ---- transitions-dev universal install ---- */
+:root {
+  --resize-dur: 300ms; --resize-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --digit-dur: 500ms; --digit-distance: 8px; --digit-stagger: 70ms;
+  --digit-blur: 2px; --digit-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --digit-dir-x: 0; --digit-dir-y: 1;
+  --badge-slide-dur: 260ms; --badge-pop-dur: 500ms; --badge-pop-close-dur: 180ms;
+  --badge-fade-dur: 400ms; --badge-fade-close-dur: 180ms;
+  --badge-blur: 2px; --badge-offset-x: -8.2px; --badge-offset-y: 12.4px;
+  --badge-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --badge-pop-ease: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --badge-close-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --text-swap-dur: 200ms; --text-swap-translate-y: 8px;
+  --text-swap-blur: 2px; --text-swap-ease: ease-out;
+  --dropdown-open-dur: 250ms; --dropdown-close-dur: 150ms;
+  --dropdown-pre-scale: 0.97; --dropdown-closing-scale: 0.99;
+  --dropdown-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --modal-open-dur: 300ms; --modal-close-dur: 180ms;
+  --modal-scale: 0.96; --modal-scale-close: 0.96;
+  --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --panel-open-dur: 400ms; --panel-close-dur: 350ms;
+  --panel-translate-y: 100px; --panel-blur: 2px;
+  --panel-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --page-slide-dur: 200ms; --page-fade-dur: 200ms;
+  --page-slide-distance: 8px; --page-blur: 3px; --page-stagger: 0ms;
+  --page-exit-enabled: 1;
+  --page-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --page-fade-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --icon-swap-dur: 200ms; --icon-swap-blur: 2px;
+  --icon-swap-start-scale: 0.25; --icon-swap-ease: ease-in-out;
+}
+
+/* ---- Design tokens ---- */
+:root {
+  /* Surfaces — warm off-white, not clinical gray */
+  --bg: #f5f3f0;
+  --bg-alt: #eeebe7;
+  --card-bg: #fafaf8;
+  --card-border: #e8e5e0;
+  --divider: #e8e5e0;
+
+  /* Text — warm charcoal, not blue-black */
+  --text: #1c1a16;
+  --text-secondary: #787570;
+  --text-tertiary: #a09c96;
+  --text-inverse: #fafaf8;
+
+  /* Financial decision colors — desaturated from pure primaries */
+  --buy: #059669;
+  --buy-bg: #ecfdf5;
+  --buy-border: #a7f3d0;
+  --buy-glow: rgba(5, 150, 105, 0.12);
+  --sell: #dc2626;
+  --sell-bg: #fef2f2;
+  --sell-border: #fecaca;
+  --sell-glow: rgba(220, 38, 38, 0.10);
+  --hold: #d97706;
+  --hold-bg: #fffbeb;
+  --hold-border: #fde68a;
+  --hold-glow: rgba(217, 119, 6, 0.10);
+  --neutral: #a09c96;
+  --neutral-bg: #f5f3f0;
+
+  /* Radius scale — varied, not uniform */
+  --radius-sm: 6px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Tinted shadows — warm charcoal tint, not generic black */
+  --shadow-xs: 0 1px 2px rgba(28, 26, 22, 0.06);
+  --shadow-sm: 0 1px 3px rgba(28, 26, 22, 0.06), 0 2px 8px rgba(28, 26, 22, 0.03);
+  --shadow: 0 1px 3px rgba(28, 26, 22, 0.05), 0 8px 20px rgba(28, 26, 22, 0.04);
+  --shadow-lg: 0 2px 8px rgba(28, 26, 22, 0.06), 0 16px 40px rgba(28, 26, 22, 0.05);
+  --shadow-xl: 0 4px 16px rgba(28, 26, 22, 0.08), 0 32px 64px rgba(28, 26, 22, 0.06);
+
+  /* Transitions */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 120ms;
+  --dur: 250ms;
+  --dur-slow: 400ms;
+
+  /* Typography */
+  --font: 'Outfit', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  padding: 32px 24px;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ---- Grain texture overlay ---- */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 9999;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ---- Container ---- */
+.container { max-width: 1340px; margin: 0 auto; }
+
+/* ---- Header ---- */
+.header { margin-bottom: 28px; }
+.header h1 {
+  font-size: 28px; font-weight: 700;
+  letter-spacing: -0.02em; line-height: 1.1;
+  color: var(--text);
+}
+.header .subtitle {
+  font-size: 14px; color: var(--text-secondary);
+  margin-top: 4px; font-weight: 400;
+}
+
+/* ---- Summary cards — asymmetric sizing ---- */
+.summary-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1.3fr 1.3fr 1fr 1fr 0.8fr;
+  gap: 12px; margin-bottom: 28px;
+}
+.summary-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--card-border);
+  padding: 16px 20px;
+  transition:
+    transform var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out);
+  will-change: transform;
+  /* Stagger entry */
+  opacity: 0; transform: translateY(12px);
+  animation: card-enter 500ms var(--ease-out) forwards;
+}
+.summary-card:nth-child(1) { animation-delay: 50ms; }
+.summary-card:nth-child(2) { animation-delay: 100ms; }
+.summary-card:nth-child(3) { animation-delay: 150ms; }
+.summary-card:nth-child(4) { animation-delay: 200ms; }
+.summary-card:nth-child(5) { animation-delay: 250ms; }
+.summary-card:nth-child(6) { animation-delay: 300ms; }
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+.summary-card .label {
+  font-size: 11px; font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+.summary-card .value {
+  font-size: 28px; font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font);
+}
+.summary-card .value.buy  { color: var(--buy); }
+.summary-card .value.sell { color: var(--sell); }
+.summary-card .value.hold { color: var(--hold); }
+
+@keyframes card-enter {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Filters ---- */
+.filters {
+  display: flex; gap: 12px; margin-bottom: 20px;
+  flex-wrap: wrap; align-items: center;
+}
+.filters .filter-label {
+  font-size: 12px; font-weight: 500;
+  color: var(--text-tertiary); letter-spacing: 0.04em;
+}
+
+/* Variant toggle — segmented control */
+.variant-toggle {
+  display: flex; gap: 2px;
+  background: var(--bg-alt); border-radius: var(--radius);
+  padding: 3px; border: 1px solid var(--card-border);
+}
+.variant-toggle button {
+  border: none; background: transparent;
+  padding: 6px 14px; border-radius: 9px;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  font-family: var(--font);
+  color: var(--text-secondary);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+  will-change: transform;
+}
+.variant-toggle button.active {
+  background: var(--card-bg);
+  color: var(--text);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Ticker filter dropdown */
+#tickerFilter {
+  padding: 7px 32px 7px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  font-size: 13px; font-weight: 500;
+  font-family: var(--font);
+  background: var(--card-bg);
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23787570' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+#tickerFilter:focus { outline: none; border-color: var(--text-tertiary); }
+
+/* View toggle */
+.view-toggle {
+  display: flex; gap: 2px; margin-left: auto;
+  background: var(--bg-alt); border-radius: var(--radius);
+  padding: 3px; border: 1px solid var(--card-border);
+}
+.view-toggle button {
+  border: none; background: transparent;
+  padding: 6px 16px; border-radius: 9px;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  font-family: var(--font);
+  color: var(--text-secondary);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+.view-toggle button.active {
+  background: var(--card-bg);
+  color: var(--text);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ---- Table (Matrix View) ---- */
+.table-wrap {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--card-border);
+  overflow-x: auto;
+  opacity: 0; transform: translateY(8px);
+  animation: card-enter 400ms var(--ease-out) 350ms forwards;
+}
+table {
+  width: 100%; border-collapse: collapse;
+  min-width: 720px;
+}
+th {
+  padding: 14px 16px; text-align: left;
+  font-size: 11px; font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--divider);
+  white-space: nowrap;
+  position: sticky; top: 0; background: var(--card-bg);
+}
+th.date-header { text-align: center; }
+th.date-header .variant-tag {
+  display: block; font-size: 10px; font-weight: 400;
+  color: var(--text-tertiary); letter-spacing: 0;
+  text-transform: none; margin-top: 1px;
+}
+td {
+  padding: 10px 16px; font-size: 13px;
+  border-bottom: 1px solid var(--divider); white-space: nowrap;
+}
+tr:last-child td { border-bottom: none; }
+tr {
+  transition: background var(--dur-fast) var(--ease-out);
+}
+tr:hover td { background: rgba(28, 26, 22, 0.02); }
+.ticker-cell {
+  font-weight: 600; letter-spacing: -0.01em;
+}
+
+/* ---- Decision badges ---- */
+.badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 4px 12px; border-radius: var(--radius-full);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  letter-spacing: -0.01em;
+  border: 1px solid transparent;
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-out);
+  will-change: transform;
+}
+.badge:hover {
+  transform: scale(1.06);
+}
+.badge:active {
+  transform: scale(0.97);
+}
+.badge.buy  { background: var(--buy-bg); color: var(--buy); border-color: var(--buy-border); }
+.badge.sell { background: var(--sell-bg); color: var(--sell); border-color: var(--sell-border); }
+.badge.hold { background: var(--hold-bg); color: var(--hold); border-color: var(--hold-border); }
+
+/* Decision change arrows */
+.change-arrow { font-size: 13px; margin-left: 3px; font-weight: 500; }
+.change-arrow.upgrade   { color: var(--buy); }
+.change-arrow.downgrade { color: var(--sell); }
+.change-arrow.neutral   { color: var(--text-tertiary); }
+
+/* Mini timeline dots */
+.mini-timeline { display: flex; gap: 4px; align-items: center; }
+.mini-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  cursor: pointer;
+  transition:
+    transform var(--dur-fast) var(--ease-spring);
+  will-change: transform;
+}
+.mini-dot:hover { transform: scale(1.5); }
+.mini-dot.buy  { background: var(--buy); box-shadow: 0 0 0 2px var(--buy-glow); }
+.mini-dot.sell { background: var(--sell); box-shadow: 0 0 0 2px var(--sell-glow); }
+.mini-dot.hold { background: var(--hold); box-shadow: 0 0 0 2px var(--hold-glow); }
+.mini-dot.no-data { background: var(--neutral); }
+
+td.decision-cell { text-align: center; }
+
+/* ---- Timeline View ---- */
+.timeline-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--card-border);
+  padding: 20px 24px; margin-bottom: 14px;
+  opacity: 0; transform: translateY(8px);
+}
+/* Stagger timeline cards */
+.timeline-card { animation: card-enter 400ms var(--ease-out) forwards; }
+.timeline-card:nth-child(1) { animation-delay: 80ms; }
+.timeline-card:nth-child(2) { animation-delay: 140ms; }
+.timeline-card:nth-child(3) { animation-delay: 200ms; }
+.timeline-card:nth-child(4) { animation-delay: 260ms; }
+.timeline-card:nth-child(5) { animation-delay: 320ms; }
+.timeline-card:nth-child(6) { animation-delay: 380ms; }
+.timeline-card:nth-child(7) { animation-delay: 440ms; }
+.timeline-card:nth-child(8) { animation-delay: 500ms; }
+
+.timeline-card .ticker-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+}
+.timeline-card .ticker-name { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.timeline-card .ticker-meta {
+  font-size: 12px; color: var(--text-tertiary);
+  font-weight: 400;
+}
+.timeline-track {
+  display: flex; align-items: center; gap: 0;
+  position: relative; padding: 8px 0;
+  overflow-x: auto;
+}
+.timeline-node {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 96px; position: relative;
+}
+.timeline-node::before {
+  content: '';
+  position: absolute; top: 24px; left: 50%; right: -50%;
+  height: 2px; background: var(--divider);
+}
+.timeline-node:last-child::before { display: none; }
+.timeline-node .node-dot {
+  width: 24px; height: 24px; border-radius: 50%;
+  z-index: 1; cursor: pointer;
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-out);
+  will-change: transform;
+}
+.timeline-node .node-dot:hover { transform: scale(1.25); }
+.timeline-node .node-dot.buy  { background: var(--buy); box-shadow: 0 0 0 4px var(--buy-glow); }
+.timeline-node .node-dot.sell { background: var(--sell); box-shadow: 0 0 0 4px var(--sell-glow); }
+.timeline-node .node-dot.hold { background: var(--hold); box-shadow: 0 0 0 4px var(--hold-glow); }
+.timeline-node .node-date {
+  font-size: 10px; color: var(--text-tertiary); margin-top: 8px;
+  font-weight: 500; letter-spacing: 0.02em;
+}
+.timeline-node .node-action {
+  font-size: 11px; font-weight: 600; margin-top: 2px;
+  letter-spacing: -0.01em;
+}
+.timeline-node .node-action.buy  { color: var(--buy); }
+.timeline-node .node-action.sell { color: var(--sell); }
+.timeline-node .node-action.hold { color: var(--hold); }
+
+/* ---- Modal — t-modal pattern ---- */
+.modal-overlay {
+  display: flex;
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(28, 26, 22, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  justify-content: center; align-items: flex-start;
+  padding: 48px 20px; overflow-y: auto;
+  pointer-events: none;
+  transition:
+    background var(--modal-open-dur) var(--modal-ease),
+    backdrop-filter var(--modal-open-dur) var(--modal-ease),
+    -webkit-backdrop-filter var(--modal-open-dur) var(--modal-ease);
+}
+.modal-overlay.open {
+  background: rgba(28, 26, 22, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+.modal {
+  background: var(--card-bg);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--card-border);
+  max-width: 720px; width: 100%;
+  max-height: 82vh; overflow-y: auto;
+  transform-origin: center;
+  transform: scale(var(--modal-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--modal-open-dur) var(--modal-ease),
+    opacity   var(--modal-open-dur) var(--modal-ease);
+  will-change: transform, opacity;
+}
+.modal-overlay.open .modal {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal-overlay.closing {
+  background: rgba(28, 26, 22, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition:
+    background var(--modal-close-dur) var(--modal-ease),
+    backdrop-filter var(--modal-close-dur) var(--modal-ease),
+    -webkit-backdrop-filter var(--modal-close-dur) var(--modal-ease);
+}
+.modal-overlay.closing .modal {
+  transform: scale(var(--modal-scale-close));
+  opacity: 0;
+  transition:
+    transform var(--modal-close-dur) var(--modal-ease),
+    opacity   var(--modal-close-dur) var(--modal-ease);
+}
+.modal-header {
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid var(--divider);
+  display: flex; justify-content: space-between; align-items: flex-start;
+  position: sticky; top: 0; background: var(--card-bg); z-index: 1;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+.modal-header h2 { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.modal-header .meta { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+.modal-close {
+  border: none; background: none; font-size: 24px; cursor: pointer;
+  color: var(--text-tertiary); padding: 4px 8px; border-radius: var(--radius-sm);
+  font-family: var(--font); line-height: 1;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.modal-close:hover { background: var(--bg-alt); color: var(--text); }
+.modal-body { padding: 24px 28px 28px; }
+.modal-body h3 {
+  font-size: 14px; font-weight: 600; margin: 20px 0 8px;
+  color: var(--text); padding-bottom: 6px;
+  border-bottom: 1px solid var(--divider);
+  letter-spacing: -0.01em;
+}
+.modal-body h3:first-child { margin-top: 0; }
+.modal-body .content-block {
+  font-size: 14px; line-height: 1.7; color: var(--text-secondary);
+  margin-bottom: 10px; white-space: pre-wrap; word-break: break-word;
+  max-width: 65ch;
+}
+
+/* ---- Loading / Skeleton ---- */
+.loading-wrap { text-align: center; padding: 80px 20px; }
+.skeleton {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--card-border);
+  padding: 28px;
+  margin-bottom: 16px;
+}
+.skeleton-row {
+  display: flex; gap: 12px; margin-bottom: 16px;
+}
+.skeleton-block {
+  background: var(--bg-alt); border-radius: var(--radius);
+  animation: shimmer 1.8s ease-in-out infinite;
+  will-change: opacity;
+}
+.skeleton-block.kpi { flex: 1; height: 72px; border-radius: var(--radius-lg); }
+.skeleton-block.filter { width: 200px; height: 36px; border-radius: var(--radius); }
+.skeleton-block.table { width: 100%; height: 320px; border-radius: var(--radius-lg); }
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+
+/* ---- Empty state ---- */
+.empty {
+  text-align: center; padding: 80px 20px;
+  color: var(--text-tertiary);
+}
+.empty .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+.empty .empty-text { font-size: 15px; font-weight: 500; }
+.empty .empty-hint { font-size: 13px; margin-top: 4px; opacity: 0.7; }
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar { height: 6px; width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 3px; opacity: 0.5; }
+
+/* ---- Responsive ---- */
+@media (max-width: 900px) {
+  body { padding: 20px 12px; }
   .summary-row {
-    display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
   }
-  .summary-card {
-    background: var(--card-bg); border-radius: var(--radius);
-    box-shadow: var(--shadow); padding: 14px 20px; min-width: 110px; flex: 1;
-  }
-  .summary-card .label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px; }
-  .summary-card .value { font-size: 24px; font-weight: 700; margin-top: 2px; }
-  .summary-card .value.buy { color: var(--buy); }
-  .summary-card .value.sell { color: var(--sell); }
-  .summary-card .value.hold { color: var(--hold); }
+  .summary-card { padding: 12px 14px; }
+  .summary-card .value { font-size: 22px; }
+  .filters { gap: 8px; }
+  th, td { padding: 8px 10px; font-size: 11px; }
+  .timeline-node { min-width: 72px; }
+  .header h1 { font-size: 22px; }
+}
+@media (max-width: 600px) {
+  .summary-row { grid-template-columns: repeat(2, 1fr); }
+}
 
-  /* Filters */
-  .filters {
-    display: flex; gap: 12px; margin-bottom: 16px;
-    flex-wrap: wrap; align-items: center;
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  .filters label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
-  .filters select, .filters button {
-    padding: 6px 14px; border: 1px solid var(--border);
-    border-radius: 6px; font-size: 13px; background: var(--card-bg);
-    cursor: pointer;
-  }
-  .variant-toggle {
-    display: flex; gap: 4px;
-    background: var(--border); border-radius: 8px; padding: 3px;
-  }
-  .variant-toggle button {
-    border: none; background: transparent;
-    padding: 5px 14px; border-radius: 6px;
-    font-size: 12px; cursor: pointer; font-weight: 500;
-    transition: all .15s;
-  }
-  .variant-toggle button.active {
-    background: var(--card-bg); box-shadow: 0 1px 2px rgba(0,0,0,.1);
-  }
-  .view-toggle {
-    display: flex; gap: 4px;
-    background: var(--border); border-radius: 8px; padding: 3px;
-    margin-left: auto;
-  }
-  .view-toggle button {
-    border: none; background: transparent;
-    padding: 5px 14px; border-radius: 6px;
-    font-size: 12px; cursor: pointer; font-weight: 500;
-    transition: all .15s;
-  }
-  .view-toggle button.active {
-    background: var(--card-bg); box-shadow: 0 1px 2px rgba(0,0,0,.1);
-  }
-
-  /* Table */
-  .table-wrap {
-    background: var(--card-bg); border-radius: var(--radius);
-    box-shadow: var(--shadow); overflow-x: auto;
-  }
-  table {
-    width: 100%; border-collapse: collapse; min-width: 700px;
-  }
-  th {
-    padding: 12px 14px; text-align: left;
-    font-size: 11px; font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase; letter-spacing: .5px;
-    border-bottom: 2px solid var(--border);
-    white-space: nowrap;
-    position: sticky; top: 0; background: var(--card-bg);
-  }
-  td {
-    padding: 10px 14px; font-size: 13px;
-    border-bottom: 1px solid var(--border); white-space: nowrap;
-  }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: #f9fafb; }
-  .ticker-cell { font-weight: 600; }
-  .date-header { text-align: center; }
-  .date-header .variant-tag {
-    display: block; font-size: 10px; font-weight: 400;
-    color: var(--text-secondary); text-transform: none; letter-spacing: 0;
-  }
-  td.decision-cell { text-align: center; }
-
-  /* Badges */
-  .badge {
-    display: inline-flex; align-items: center; gap: 2px;
-    padding: 4px 12px; border-radius: 20px;
-    font-size: 12px; font-weight: 600;
-    cursor: pointer;
-    transition: transform .1s, box-shadow .1s;
-  }
-  .badge:hover { transform: scale(1.05); box-shadow: 0 2px 6px rgba(0,0,0,.15); }
-  .badge.buy    { background: var(--buy-bg); color: var(--buy); }
-  .badge.sell   { background: var(--sell-bg); color: var(--sell); }
-  .badge.hold   { background: var(--hold-bg); color: var(--hold); }
-
-  /* Change arrow */
-  .change-arrow { font-size: 14px; margin-left: 2px; }
-  .change-arrow.upgrade   { color: var(--buy); }
-  .change-arrow.downgrade { color: var(--sell); }
-  .change-arrow.neutral   { color: var(--text-secondary); }
-
-  /* Trend mini-timeline */
-  .mini-timeline { display: flex; gap: 3px; align-items: center; }
-  .mini-dot {
-    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-    cursor: pointer; transition: transform .1s;
-  }
-  .mini-dot:hover { transform: scale(1.4); }
-  .mini-dot.buy  { background: var(--buy); }
-  .mini-dot.sell { background: var(--sell); }
-  .mini-dot.hold { background: var(--hold); }
-  .mini-dot.no-data { background: var(--border); }
-
-  /* Timeline view */
-  .timeline-card {
-    background: var(--card-bg); border-radius: var(--radius);
-    box-shadow: var(--shadow); padding: 16px 20px; margin-bottom: 12px;
-  }
-  .timeline-card .ticker-header {
-    display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
-  }
-  .timeline-card .ticker-name { font-size: 16px; font-weight: 700; }
-  .timeline-track {
-    display: flex; align-items: center; gap: 0;
-    position: relative; padding: 8px 0;
-    overflow-x: auto;
-  }
-  .timeline-node {
-    display: flex; flex-direction: column; align-items: center;
-    min-width: 90px; position: relative;
-  }
-  .timeline-node::before {
-    content: '';
-    position: absolute; top: 22px; left: 50%; right: -50%;
-    height: 3px; background: var(--border);
-  }
-  .timeline-node:last-child::before { display: none; }
-  .timeline-node .node-dot {
-    width: 22px; height: 22px; border-radius: 50%;
-    z-index: 1; cursor: pointer;
-    transition: transform .15s; position: relative;
-  }
-  .timeline-node .node-dot:hover { transform: scale(1.2); }
-  .timeline-node .node-dot.buy  { background: var(--buy); box-shadow: 0 0 0 3px var(--buy-bg); }
-  .timeline-node .node-dot.sell { background: var(--sell); box-shadow: 0 0 0 3px var(--sell-bg); }
-  .timeline-node .node-dot.hold { background: var(--hold); box-shadow: 0 0 0 3px var(--hold-bg); }
-  .timeline-node .node-date {
-    font-size: 10px; color: var(--text-secondary); margin-top: 6px;
-  }
-  .timeline-node .node-action {
-    font-size: 11px; font-weight: 600; margin-top: 2px;
-  }
-  .timeline-node .node-action.buy  { color: var(--buy); }
-  .timeline-node .node-action.sell { color: var(--sell); }
-  .timeline-node .node-action.hold { color: var(--hold); }
-
-  /* Modal */
-  .modal-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,.4); z-index: 1000;
-    justify-content: center; align-items: flex-start;
-    padding: 40px 20px; overflow-y: auto;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--card-bg); border-radius: var(--radius);
-    box-shadow: 0 20px 60px rgba(0,0,0,.2);
-    max-width: 720px; width: 100%;
-    max-height: 85vh; overflow-y: auto;
-  }
-  .modal-header {
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex; justify-content: space-between; align-items: flex-start;
-    position: sticky; top: 0; background: var(--card-bg); z-index: 1;
-  }
-  .modal-header h2 { font-size: 18px; }
-  .modal-header .meta { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
-  .modal-close {
-    border: none; background: none; font-size: 22px; cursor: pointer;
-    color: var(--text-secondary); padding: 4px 8px; border-radius: 6px;
-  }
-  .modal-close:hover { background: var(--border); }
-  .modal-body { padding: 20px 24px; }
-  .modal-body h3 {
-    font-size: 14px; font-weight: 600; margin: 16px 0 8px;
-    color: var(--text); padding-bottom: 4px; border-bottom: 1px solid var(--border);
-  }
-  .modal-body h3:first-child { margin-top: 0; }
-  .modal-body .content-block {
-    font-size: 14px; line-height: 1.65; color: var(--text-secondary);
-    margin-bottom: 8px; white-space: pre-wrap; word-break: break-word;
-  }
-
-  .loading { text-align: center; padding: 60px; color: var(--text-secondary); font-size: 15px; }
-  .spinner {
-    display: inline-block; width: 32px; height: 32px;
-    border: 3px solid var(--border); border-top-color: var(--text-secondary);
-    border-radius: 50%; animation: spin .6s linear infinite; margin-bottom: 12px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .empty { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
-
-  @media (max-width: 768px) {
-    body { padding: 12px; }
-    .summary-row { gap: 6px; }
-    .summary-card { padding: 10px 14px; min-width: 80px; }
-    .summary-card .value { font-size: 20px; }
-    th, td { padding: 8px 10px; font-size: 12px; }
-    .timeline-node { min-width: 70px; }
-  }
+  html { scroll-behavior: auto; }
+}
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>TradingAgents 决策仪表盘</h1>
-  <p class="subtitle">按标的统计每日交易决策，点击决策查看详细理由。支持矩阵视图和时间线视图切换。</p>
+  <div class="header">
+    <h1>TradingAgents 决策仪表盘</h1>
+    <p class="subtitle">Multi-agent trading decisions across tracked tickers. Click any badge for detailed rationale.</p>
+  </div>
 
   <div class="summary-row" id="summary"></div>
 
   <div class="filters">
-    <label>报告类型:</label>
+    <span class="filter-label">报告类型</span>
     <div class="variant-toggle" id="variantToggle"></div>
-    <label style="margin-left:12px">标的:</label>
+    <span class="filter-label" style="margin-left:8px">标的</span>
     <select id="tickerFilter"><option value="all">全部</option></select>
     <div class="view-toggle">
-      <button class="active" data-view="matrix">矩阵视图</button>
-      <button data-view="timeline">时间线视图</button>
+      <button class="active" data-view="matrix">矩阵</button>
+      <button data-view="timeline">时间线</button>
     </div>
   </div>
 
   <div id="mainArea">
-    <div class="loading"><div class="spinner"></div><div>正在加载报告数据...</div></div>
+    <div class="loading-wrap">
+      <div class="skeleton">
+        <div class="skeleton-row">
+          <div class="skeleton-block kpi"></div>
+          <div class="skeleton-block kpi"></div>
+          <div class="skeleton-block kpi"></div>
+          <div class="skeleton-block kpi"></div>
+          <div class="skeleton-block kpi"></div>
+          <div class="skeleton-block kpi"></div>
+        </div>
+        <div class="skeleton-row" style="margin-top:20px">
+          <div class="skeleton-block filter"></div>
+          <div style="flex:1"></div>
+          <div class="skeleton-block filter"></div>
+        </div>
+        <div class="skeleton-block table" style="margin-top:20px"></div>
+      </div>
+    </div>
   </div>
 </div>
 
+<!-- Modal -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-header">
@@ -278,7 +632,7 @@
         <h2 id="modalTitle"></h2>
         <div class="meta" id="modalMeta"></div>
       </div>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <button class="modal-close" onclick="closeModal()" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body" id="modalBody"></div>
   </div>
@@ -312,8 +666,6 @@ async function loadFromAggregated() {
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   const data = await resp.json();
-  // New format: { entries: [...], visible_tickers: [...] }
-  // Old format: plain array
   if (data.entries) {
     visibleTickers = new Set(data.visible_tickers || []);
     return data.entries;
@@ -335,8 +687,11 @@ async function loadFromIndividualFiles() {
         action: normalizeAction(item.action, item.raw_decision),
         raw_decision: item.raw_decision || '',
         final_decision: item.final_decision || '',
+        final_decision_cn: item.final_decision_cn || '',
         investment_plan: item.investment_plan || '',
+        investment_plan_cn: item.investment_plan_cn || '',
         trader_plan: item.trader_plan || '',
+        trader_plan_cn: item.trader_plan_cn || '',
       }));
     } catch (err) {
       console.warn(`Failed to load ${filename}: ${err.message}`);
@@ -388,7 +743,6 @@ function normalizeAction(action, rawDecision) {
 // ===== FILTERING =====
 function getFilteredEntries() {
   let entries = allEntries;
-  // Filter by whitelist — only show tickers present in ticker config files
   if (visibleTickers.size > 0) {
     entries = entries.filter(e => visibleTickers.has(e.ticker));
   }
@@ -416,14 +770,26 @@ function render() {
   const entries = getFilteredEntries();
   if (entries.length === 0) {
     document.getElementById('mainArea').innerHTML =
-      '<div class="empty">没有找到报告数据。请确保 summary_*.json 文件在 reports 目录中。</div>';
+      '<div class="empty"><div class="empty-icon">--</div><div class="empty-text">No report data found</div><div class="empty-hint">Ensure summary_*.json files exist in the reports directory.</div></div>';
+    document.getElementById('summary').innerHTML = '';
     return;
   }
   renderSummary(entries);
   renderVariantToggle();
   renderTickerFilter(entries);
-  if (activeView === 'matrix') renderMatrix(entries);
-  else renderTimeline(entries);
+
+  // Crossfade between views
+  const mainArea = document.getElementById('mainArea');
+  mainArea.style.opacity = '0';
+  mainArea.style.transition = 'opacity 200ms var(--ease-out)';
+
+  requestAnimationFrame(() => {
+    if (activeView === 'matrix') renderMatrix(entries);
+    else renderTimeline(entries);
+    requestAnimationFrame(() => {
+      mainArea.style.opacity = '1';
+    });
+  });
 }
 
 function renderSummary(entries) {
@@ -431,36 +797,44 @@ function renderSummary(entries) {
   const sell = entries.filter(e => e.action === 'SELL').length;
   const hold = entries.filter(e => e.action === 'HOLD').length;
   const total = buy + sell + hold;
-
-  // Calculate recent trend (last 2 days vs previous)
   const dates = [...new Set(entries.map(e => e.date))].sort();
+  const tickerSet = new Set(entries.map(e => e.ticker));
+
+  // Market sentiment trend
   const recentDates = dates.slice(-2);
   const olderDates = dates.slice(0, -2);
   const recentEntries = entries.filter(e => recentDates.includes(e.date));
   const olderEntries = entries.filter(e => olderDates.includes(e.date));
   const recentBuyPct = recentEntries.length ? (recentEntries.filter(e => e.action === 'BUY').length / recentEntries.length * 100) : 0;
   const olderBuyPct = olderEntries.length ? (olderEntries.filter(e => e.action === 'BUY').length / olderEntries.length * 100) : 0;
-  const sentimentTrend = recentBuyPct > olderBuyPct + 10 ? '↑ 偏多' : recentBuyPct < olderBuyPct - 10 ? '↓ 偏空' : '→ 持平';
+  const sentimentTrend = recentBuyPct > olderBuyPct + 10 ? '偏多' : recentBuyPct < olderBuyPct - 10 ? '偏空' : '持平';
+  const sentimentColor = sentimentTrend === '偏多' ? 'var(--buy)' : sentimentTrend === '偏空' ? 'var(--sell)' : 'var(--text-secondary)';
+  const buyPct = total ? ((buy / total) * 100).toFixed(0) : '0';
 
   document.getElementById('summary').innerHTML = `
     <div class="summary-card">
-      <div class="label">买入</div><div class="value buy">${buy}</div>
+      <div class="label">买入</div>
+      <div class="value buy">${buy}</div>
     </div>
     <div class="summary-card">
-      <div class="label">卖出</div><div class="value sell">${sell}</div>
+      <div class="label">卖出</div>
+      <div class="value sell">${sell}</div>
     </div>
     <div class="summary-card">
-      <div class="label">持有</div><div class="value hold">${hold}</div>
+      <div class="label">持有</div>
+      <div class="value hold">${hold}</div>
     </div>
     <div class="summary-card">
       <div class="label">市场情绪</div>
-      <div class="value" style="font-size:18px;color:${sentimentTrend.includes('偏多') ? 'var(--buy)' : sentimentTrend.includes('偏空') ? 'var(--sell)' : 'var(--text-secondary)'}">${sentimentTrend}</div>
+      <div class="value" style="font-size:18px;color:${sentimentColor}">${sentimentTrend}</div>
     </div>
     <div class="summary-card">
-      <div class="label">覆盖标的</div><div class="value">${new Set(entries.map(e => e.ticker)).size}</div>
+      <div class="label">覆盖标的</div>
+      <div class="value">${tickerSet.size}</div>
     </div>
     <div class="summary-card">
-      <div class="label">交易日</div><div class="value">${dates.length}</div>
+      <div class="label">交易日</div>
+      <div class="value">${dates.length}</div>
     </div>
   `;
 }
@@ -506,12 +880,11 @@ function renderMatrix(entries) {
     const variants = [...new Set(entries.filter(e => e.date === date).map(e => e.variant))];
     const tag = variants.length === 1 && variants[0] !== 'standard'
       ? `<span class="variant-tag">${variants[0]}</span>` : '';
-    html += `<th class="date-header">${date}${tag}</th>`;
+    html += `<th class="date-header">${date.slice(5)}${tag}</th>`;
   }
   html += '</tr></thead><tbody>';
 
   for (const ticker of tickers) {
-    // Build mini timeline from all available data
     const tickerHistory = allDates.map(d => {
       const e = allEntries.find(x => x.ticker === ticker && x.date === d);
       return e ? e.action.toLowerCase() : null;
@@ -519,20 +892,19 @@ function renderMatrix(entries) {
 
     html += '<tr>';
     html += `<td class="ticker-cell">${ticker}</td>`;
-    html += `<td><div class="mini-timeline">${tickerHistory.map(a =>
-      `<span class="mini-dot ${a || 'no-data'}"
-             title="${a ? actionLabel(a.toUpperCase()) : '无数据'}"
-             style="cursor:${a ? 'pointer' : 'default'}"></span>`
-    ).join('')}</div></td>`;
+    html += '<td><div class="mini-timeline">' +
+      tickerHistory.map(a =>
+        `<span class="mini-dot ${a || 'no-data'}"
+               title="${a ? actionLabel(a.toUpperCase()) : '无数据'}"
+               style="cursor:${a ? 'pointer' : 'default'}"></span>`
+      ).join('') +
+      '</div></td>';
 
     let prevEntry = null;
     for (const date of dates) {
       const entry = matrix[`${ticker}|${date}`];
       if (entry) {
-        const change = getDecisionChange(
-          prevEntry,
-          entry
-        );
+        const change = getDecisionChange(prevEntry, entry);
         const hasRationale = entry.final_decision || entry.investment_plan;
         html += `<td class="decision-cell">
           <span class="badge ${entry.action.toLowerCase()}"
@@ -546,7 +918,7 @@ function renderMatrix(entries) {
         </td>`;
         prevEntry = entry;
       } else {
-        html += '<td class="decision-cell"><span style="color:var(--unknown)">—</span></td>';
+        html += '<td class="decision-cell"><span style="color:var(--neutral)">&mdash;</span></td>';
         prevEntry = null;
       }
     }
@@ -568,7 +940,7 @@ function renderTimeline(entries) {
     html += `<div class="timeline-card">
       <div class="ticker-header">
         <span class="ticker-name">${ticker}</span>
-        <span style="font-size:12px;color:var(--text-secondary)">${tickerEntries.length} 个交易日</span>
+        <span class="ticker-meta">${tickerEntries.length} 个交易日</span>
       </div>
       <div class="timeline-track">`;
 
@@ -588,7 +960,7 @@ function renderTimeline(entries) {
     html += '</div></div>';
   }
 
-  document.getElementById('mainArea').innerHTML = html || '<div class="empty">无数据</div>';
+  document.getElementById('mainArea').innerHTML = html || '<div class="empty"><div class="empty-text">No data for selected filters</div></div>';
 }
 
 function actionLabel(action) {
@@ -596,7 +968,7 @@ function actionLabel(action) {
   return map[action] || action;
 }
 
-// ===== MODAL =====
+// ===== MODAL — transitions-dev pattern =====
 function openModal(el) {
   const ticker = el.dataset.ticker;
   const date = el.dataset.date;
@@ -608,7 +980,7 @@ function openModal(el) {
 
   document.getElementById('modalTitle').textContent = `${ticker} · ${actionLabel(entry.action)}`;
   document.getElementById('modalMeta').textContent =
-    `${date}${entry.variant !== 'standard' ? ` · ${entry.variant}` : ''} · 评级: ${entry.raw_decision || '—'}`;
+    `${date}${entry.variant !== 'standard' ? ` · ${entry.variant}` : ''} · ${entry.raw_decision || '--'}`;
 
   let body = '';
   if (entry.final_decision_cn || entry.final_decision) {
@@ -617,8 +989,8 @@ function openModal(el) {
       body += `<div class="content-block">${escapeHtml(entry.final_decision_cn)}</div>`;
     }
     if (entry.final_decision) {
-      body += `<details><summary style="cursor:pointer;font-size:13px;color:var(--text-secondary)">查看原文</summary>`;
-      body += `<div class="content-block" style="margin-top:8px">${escapeHtml(entry.final_decision)}</div></details>`;
+      body += '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;color:var(--text-tertiary);font-weight:500">查看原文</summary>';
+      body += `<div class="content-block" style="margin-top:6px">${escapeHtml(entry.final_decision)}</div></details>`;
     }
   }
   if (entry.investment_plan_cn || entry.investment_plan) {
@@ -627,8 +999,8 @@ function openModal(el) {
       body += `<div class="content-block">${escapeHtml(entry.investment_plan_cn)}</div>`;
     }
     if (entry.investment_plan) {
-      body += `<details><summary style="cursor:pointer;font-size:13px;color:var(--text-secondary)">查看原文</summary>`;
-      body += `<div class="content-block" style="margin-top:8px">${escapeHtml(entry.investment_plan)}</div></details>`;
+      body += '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;color:var(--text-tertiary);font-weight:500">查看原文</summary>';
+      body += `<div class="content-block" style="margin-top:6px">${escapeHtml(entry.investment_plan)}</div></details>`;
     }
   }
   if (entry.trader_plan_cn || entry.trader_plan) {
@@ -637,19 +1009,29 @@ function openModal(el) {
       body += `<div class="content-block">${escapeHtml(entry.trader_plan_cn)}</div>`;
     }
     if (entry.trader_plan) {
-      body += `<details><summary style="cursor:pointer;font-size:13px;color:var(--text-secondary)">查看原文</summary>`;
-      body += `<div class="content-block" style="margin-top:8px">${escapeHtml(entry.trader_plan)}</div></details>`;
+      body += '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;color:var(--text-tertiary);font-weight:500">查看原文</summary>';
+      body += `<div class="content-block" style="margin-top:6px">${escapeHtml(entry.trader_plan)}</div></details>`;
     }
   }
 
   document.getElementById('modalBody').innerHTML = body;
-  document.getElementById('modalOverlay').classList.add('open');
+  const overlay = document.getElementById('modalOverlay');
+  overlay.classList.remove('closing');
+  overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('open');
-  document.body.style.overflow = '';
+  const overlay = document.getElementById('modalOverlay');
+  overlay.classList.remove('open');
+  overlay.classList.add('closing');
+  const closeMs = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
+  ) || 180;
+  setTimeout(() => {
+    overlay.classList.remove('closing');
+    document.body.style.overflow = '';
+  }, closeMs);
 }
 
 document.getElementById('modalOverlay').addEventListener('click', (e) => {
