@@ -447,9 +447,19 @@ tr:hover td { background: rgba(28, 26, 22, 0.02); }
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- Unified action indicator dot ---- */
+.action-dot {
+  display: inline-block; width: 7px; height: 7px;
+  border-radius: 50%; flex-shrink: 0;
+  vertical-align: middle; position: relative; top: -1px;
+}
+.action-dot.buy  { background: var(--buy); }
+.action-dot.sell { background: var(--sell); }
+.action-dot.hold { background: var(--hold); }
+
 /* ---- Decision badges ---- */
 .badge {
-  display: inline-flex; align-items: center; gap: 3px;
+  display: inline-flex; align-items: center; gap: 5px;
   padding: 4px 12px; border-radius: var(--radius-full);
   font-size: 12px; font-weight: 600; cursor: pointer;
   letter-spacing: -0.01em;
@@ -554,6 +564,7 @@ td.decision-cell { text-align: center; }
 .timeline-node .node-action {
   font-size: 11px; font-weight: 600; margin-top: 2px;
   letter-spacing: -0.01em;
+  display: inline-flex; align-items: center; gap: 4px;
 }
 .timeline-node .node-action.buy  { color: var(--buy); }
 .timeline-node .node-action.sell { color: var(--sell); }
@@ -1071,7 +1082,7 @@ function openDrawer(action) {
   const labels = { BUY: '买入', SELL: '卖出', HOLD: '持有' };
   const colors = { BUY: 'var(--buy)', SELL: 'var(--sell)', HOLD: 'var(--hold)' };
 
-  title.innerHTML = `<span style="color:${colors[action]}">${labels[action]}</span> 信号标的`;
+  title.innerHTML = `<span class="action-dot ${action.toLowerCase()}" style="display:inline-block;width:10px;height:10px;top:0"></span> <span style="color:${colors[action]}">${labels[action]}</span> 信号标的`;
   count.textContent = `${entries.length} 个标的 · ${[...new Set(entries.map(e => e.date))].join(', ')}`;
 
   if (entries.length === 0) {
@@ -1224,7 +1235,7 @@ function renderMatrix(entries) {
                 data-variant="${entry.variant}"
                 title="${escapeHtml(tooltip)}"
                 onclick="openModal(this)">
-            ${actionLabel(entry.action)}${change}
+            ${actionBadge(entry.action)}${change}
           </span>
         </td>`;
         prevEntry = entry;
@@ -1264,7 +1275,7 @@ function renderTimeline(entries) {
              onclick="openModal(this)"
              title="${actionLabel(entry.action)}"></div>
         <div class="node-date">${entry.date.slice(5)}</div>
-        <div class="node-action ${entry.action.toLowerCase()}">${actionLabel(entry.action)}</div>
+        <div class="node-action ${entry.action.toLowerCase()}">${actionBadge(entry.action)}</div>
       </div>`;
     }
 
@@ -1278,6 +1289,12 @@ function actionLabel(action) {
   const map = { BUY: '买入', SELL: '卖出', HOLD: '持有' };
   return map[action] || action;
 }
+function actionDot(action) {
+  return `<span class="action-dot ${action.toLowerCase()}"></span>`;
+}
+function actionBadge(action) {
+  return `${actionDot(action)}${actionLabel(action)}`;
+}
 
 // ===== MODAL — transitions-dev pattern =====
 function openModal(el) {
@@ -1289,7 +1306,7 @@ function openModal(el) {
   );
   if (!entry) return;
 
-  document.getElementById('modalTitle').textContent = `${ticker} · ${actionLabel(entry.action)}`;
+  document.getElementById('modalTitle').innerHTML = `${ticker} · ${actionBadge(entry.action)}`;
   document.getElementById('modalMeta').textContent =
     `${date}${entry.variant !== 'standard' ? ` · ${entry.variant}` : ''} · ${entry.raw_decision || '--'}`;
 
