@@ -1012,12 +1012,15 @@ function render() {
 }
 
 function renderSummary(entries) {
-  const buy = entries.filter(e => e.action === 'BUY').length;
-  const sell = entries.filter(e => e.action === 'SELL').length;
-  const hold = entries.filter(e => e.action === 'HOLD').length;
+  // Only count latest date for Buy/Sell/Hold cards
+  const latestDate = [...new Set(entries.map(e => e.date))].sort().pop();
+  const latestEntries = entries.filter(e => e.date === latestDate);
+  const buy = latestEntries.filter(e => e.action === 'BUY').length;
+  const sell = latestEntries.filter(e => e.action === 'SELL').length;
+  const hold = latestEntries.filter(e => e.action === 'HOLD').length;
   const total = buy + sell + hold;
   const dates = [...new Set(entries.map(e => e.date))].sort();
-  const tickerSet = new Set(entries.map(e => e.ticker));
+  const tickerSet = new Set(latestEntries.map(e => e.ticker));
 
   const recentDates = dates.slice(-2);
   const olderDates = dates.slice(0, -2);
@@ -1030,17 +1033,17 @@ function renderSummary(entries) {
 
   document.getElementById('summary').innerHTML = `
     <div class="summary-card kpi-clickable buy-accent${activeDrawer === 'BUY' ? ' active' : ''}" data-action="BUY" onclick="toggleDrawer('BUY')">
-      <div class="label">买入</div>
+      <div class="label">买入 · ${latestDate}</div>
       <div class="value buy">${buy}</div>
       <div class="click-hint">点击查看标的</div>
     </div>
     <div class="summary-card kpi-clickable sell-accent${activeDrawer === 'SELL' ? ' active' : ''}" data-action="SELL" onclick="toggleDrawer('SELL')">
-      <div class="label">卖出</div>
+      <div class="label">卖出 · ${latestDate}</div>
       <div class="value sell">${sell}</div>
       <div class="click-hint">点击查看标的</div>
     </div>
     <div class="summary-card kpi-clickable hold-accent${activeDrawer === 'HOLD' ? ' active' : ''}" data-action="HOLD" onclick="toggleDrawer('HOLD')">
-      <div class="label">持有</div>
+      <div class="label">持有 · ${latestDate}</div>
       <div class="value hold">${hold}</div>
       <div class="click-hint">点击查看标的</div>
     </div>
