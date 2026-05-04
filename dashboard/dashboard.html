@@ -1045,8 +1045,8 @@ function render() {
 
 function renderSummary(entries) {
   // Only count latest date for Buy/Sell/Hold cards
-  const latestDate = [...new Set(entries.map(e => e.date))].sort().pop();
-  const latestEntries = entries.filter(e => e.date === latestDate);
+  const latestDate = [...new Set(entries.map(e => e.date))].sort().pop() || '--';
+  const latestEntries = latestDate !== '--' ? entries.filter(e => e.date === latestDate) : entries;
   const buy = latestEntries.filter(e => e.action === 'BUY').length;
   const sell = latestEntries.filter(e => e.action === 'SELL').length;
   const hold = latestEntries.filter(e => e.action === 'HOLD').length;
@@ -1128,7 +1128,7 @@ function openDrawer(action) {
     grid.innerHTML = entries.map(e => {
       const prices = extractPricesFromEntry(e);
       return `
-      <div class="kpi-ticker-card" onclick="openDrawerEntry('${e.ticker}','${e.date}','${e.variant}')">
+      <div class="kpi-ticker-card" data-ticker="${e.ticker}" data-date="${e.date}" data-variant="${e.variant}">
         <div class="ticker-head">
           <span class="ticker-symbol">${e.ticker}</span>
           <span class="ticker-date">${e.date}${e.variant !== 'standard' ? ' · ' + e.variant : ''}</span>
@@ -1147,6 +1147,14 @@ function openDrawer(action) {
   }
 
   drawer.classList.add('open');
+  // Delegated click handler for drawer cards
+  grid.onclick = function(e) {
+    const card = e.target.closest('.kpi-ticker-card');
+    if (!card) return;
+    const { ticker, date, variant } = card.dataset;
+    const entry = allEntries.find(en => en.ticker === ticker && en.date === date && en.variant === variant);
+    if (entry) openModal({ ticker, date, variant });
+  };
   // Update KPI card active states
   document.querySelectorAll('.summary-card.kpi-clickable').forEach(card => {
     card.classList.toggle('active', card.dataset.action === action);
@@ -1157,15 +1165,6 @@ function closeDrawer() {
   activeDrawer = null;
   document.getElementById('kpiDrawer').classList.remove('open');
   document.querySelectorAll('.summary-card.kpi-clickable').forEach(card => card.classList.remove('active'));
-}
-
-function openDrawerEntry(ticker, date, variant) {
-  // Find the modal trigger element or create a synthetic one
-  const entry = allEntries.find(e => e.ticker === ticker && e.date === date && e.variant === variant);
-  if (entry) {
-    const fakeEl = { dataset: { ticker, date, variant } };
-    openModal(fakeEl);
-  }
 }
 
 function renderVariantToggle() {
@@ -1257,7 +1256,7 @@ function renderMatrix(entries) {
                 data-ticker="${entry.ticker}"
                 data-date="${entry.date}"
                 data-variant="${entry.variant}"
-                title="${escapeHtml(tooltip)}"
+                title="${tooltip.replace(/"/g, '&quot;')}"
                 onclick="openModal(this)">
             ${actionBadge(entry.action)}
           </span>
@@ -1319,10 +1318,12 @@ function actionBadge(action) {
 }
 
 // ===== MODAL — transitions-dev pattern =====
-function openModal(el) {
-  const ticker = el.dataset.ticker;
-  const date = el.dataset.date;
-  const variant = el.dataset.variant;
+function openModal(src) {
+  // Accept both DOM element (via onclick) and plain object (via delegated handler)
+  const ds = src.dataset || src;
+  const ticker = ds.ticker;
+  const date = ds.date;
+  const variant = ds.variant;
   const entry = allEntries.find(
     e => e.ticker === ticker && e.date === date && e.variant === variant
   );

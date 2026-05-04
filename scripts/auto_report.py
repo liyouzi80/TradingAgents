@@ -62,11 +62,6 @@ def build_config() -> dict:
     config["deep_think_llm"] = models["deep"]
     config["quick_think_llm"] = models["quick"]
 
-    # 调试:打印实际使用的模型名(脱敏显示)
-    deep_model = models["deep"]
-    quick_model = models["quick"]
-    print(f"🔍 DEBUG: deep_model = {deep_model[:6]}...{deep_model[-6:] if len(deep_model) > 12 else ''}, len={len(deep_model)}")
-    print(f"🔍 DEBUG: quick_model = {quick_model[:6]}...{quick_model[-6:] if len(quick_model) > 12 else ''}, len={len(quick_model)}")
     config["max_debate_rounds"] = int(os.getenv("MAX_DEBATE_ROUNDS", "1"))
     config["max_risk_discuss_rounds"] = int(os.getenv("MAX_RISK_ROUNDS", "1"))
     config["online_tools"] = True

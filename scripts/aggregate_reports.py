@@ -81,7 +81,7 @@ def aggregate(reports_dir):
         if isinstance(data, dict):
             data = [data]
         for item in data:
-            if not item.get('success', True):
+            if not item.get('success', False):
                 continue
             entries.append({
                 'date': date_str,
