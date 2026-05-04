@@ -145,7 +145,7 @@ body::after {
 /* ---- Summary cards — asymmetric sizing ---- */
 .summary-row {
   display: grid;
-  grid-template-columns: 1.3fr 1.3fr 1.3fr 1fr 1fr 0.8fr;
+  grid-template-columns: 1.2fr 1.2fr 1.2fr 1fr 1fr 1fr 0.8fr;
   gap: 12px; margin-bottom: 28px;
 }
 .summary-card {
@@ -208,9 +208,10 @@ body::after {
   transition: transform var(--dur) var(--ease-out);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
-.summary-card.kpi-clickable.buy-accent::after  { background: var(--buy); }
-.summary-card.kpi-clickable.sell-accent::after { background: var(--sell); }
-.summary-card.kpi-clickable.hold-accent::after { background: var(--hold); }
+.summary-card.kpi-clickable.buy-accent::after     { background: var(--buy); }
+.summary-card.kpi-clickable.sell-accent::after    { background: var(--sell); }
+.summary-card.kpi-clickable.hold-accent::after    { background: var(--hold); }
+.summary-card.kpi-clickable.unknown-accent::after { background: var(--neutral); }
 .summary-card.kpi-clickable.active::after { transform: scaleX(1); }
 .summary-card.kpi-clickable.active {
   box-shadow: var(--shadow-lg);
@@ -455,9 +456,10 @@ tr:hover td { background: rgba(28, 26, 22, 0.02); }
   border-radius: 50%; flex-shrink: 0;
   vertical-align: middle; position: relative; top: -1px;
 }
-.action-dot.buy  { background: var(--buy); }
-.action-dot.sell { background: var(--sell); }
-.action-dot.hold { background: var(--hold); }
+.action-dot.buy     { background: var(--buy); }
+.action-dot.sell    { background: var(--sell); }
+.action-dot.hold    { background: var(--hold); }
+.action-dot.unknown { background: var(--neutral); }
 
 /* ---- Decision badges ---- */
 .badge {
@@ -477,9 +479,10 @@ tr:hover td { background: rgba(28, 26, 22, 0.02); }
 .badge:active {
   transform: scale(0.97);
 }
-.badge.buy  { background: var(--buy-bg); color: var(--buy); border-color: var(--buy-border); }
-.badge.sell { background: var(--sell-bg); color: var(--sell); border-color: var(--sell-border); }
-.badge.hold { background: var(--hold-bg); color: var(--hold); border-color: var(--hold-border); }
+.badge.buy     { background: var(--buy-bg); color: var(--buy); border-color: var(--buy-border); }
+.badge.sell    { background: var(--sell-bg); color: var(--sell); border-color: var(--sell-border); }
+.badge.hold    { background: var(--hold-bg); color: var(--hold); border-color: var(--hold-border); }
+.badge.unknown { background: var(--neutral-bg); color: var(--neutral); border-color: var(--card-border); }
 
 /* Mini timeline dots */
 .mini-timeline { display: flex; gap: 4px; align-items: center; }
@@ -491,10 +494,11 @@ tr:hover td { background: rgba(28, 26, 22, 0.02); }
   will-change: transform;
 }
 .mini-dot:hover { transform: scale(1.5); }
-.mini-dot.buy  { background: var(--buy); box-shadow: 0 0 0 2px var(--buy-glow); }
-.mini-dot.sell { background: var(--sell); box-shadow: 0 0 0 2px var(--sell-glow); }
-.mini-dot.hold { background: var(--hold); box-shadow: 0 0 0 2px var(--hold-glow); }
-.mini-dot.no-data { background: var(--neutral); }
+.mini-dot.buy     { background: var(--buy); box-shadow: 0 0 0 2px var(--buy-glow); }
+.mini-dot.sell    { background: var(--sell); box-shadow: 0 0 0 2px var(--sell-glow); }
+.mini-dot.hold    { background: var(--hold); box-shadow: 0 0 0 2px var(--hold-glow); }
+.mini-dot.unknown { background: var(--neutral); box-shadow: 0 0 0 2px rgba(160,156,150,0.15); }
+.mini-dot.no-data { background: var(--divider); }
 
 td.decision-cell { text-align: center; }
 
@@ -550,9 +554,10 @@ td.decision-cell { text-align: center; }
   will-change: transform;
 }
 .timeline-node .node-dot:hover { transform: scale(1.25); }
-.timeline-node .node-dot.buy  { background: var(--buy); box-shadow: 0 0 0 4px var(--buy-glow); }
-.timeline-node .node-dot.sell { background: var(--sell); box-shadow: 0 0 0 4px var(--sell-glow); }
-.timeline-node .node-dot.hold { background: var(--hold); box-shadow: 0 0 0 4px var(--hold-glow); }
+.timeline-node .node-dot.buy     { background: var(--buy); box-shadow: 0 0 0 4px var(--buy-glow); }
+.timeline-node .node-dot.sell    { background: var(--sell); box-shadow: 0 0 0 4px var(--sell-glow); }
+.timeline-node .node-dot.hold    { background: var(--hold); box-shadow: 0 0 0 4px var(--hold-glow); }
+.timeline-node .node-dot.unknown { background: var(--neutral); box-shadow: 0 0 0 4px rgba(160,156,150,0.15); }
 .timeline-node .node-date {
   font-size: 10px; color: var(--text-tertiary); margin-top: 8px;
   font-weight: 500; letter-spacing: 0.02em;
@@ -562,9 +567,10 @@ td.decision-cell { text-align: center; }
   letter-spacing: -0.01em;
   display: inline-flex; align-items: center; gap: 4px;
 }
-.timeline-node .node-action.buy  { color: var(--buy); }
-.timeline-node .node-action.sell { color: var(--sell); }
-.timeline-node .node-action.hold { color: var(--hold); }
+.timeline-node .node-action.buy     { color: var(--buy); }
+.timeline-node .node-action.sell    { color: var(--sell); }
+.timeline-node .node-action.hold    { color: var(--hold); }
+.timeline-node .node-action.unknown { color: var(--neutral); }
 
 /* ---- Modal — t-modal pattern ---- */
 .modal-overlay {
@@ -700,7 +706,7 @@ td.decision-cell { text-align: center; }
 @media (max-width: 900px) {
   body { padding: 20px 12px; }
   .summary-row {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
   }
   .summary-card { padding: 12px 14px; }
@@ -956,7 +962,8 @@ function normalizeAction(action, rawDecision) {
   const rd = (rawDecision || '').toLowerCase();
   if (/overweight|buy/.test(rd)) return 'BUY';
   if (/underweight|sell/.test(rd)) return 'SELL';
-  return 'HOLD';
+  // Keep UNKNOWN instead of forcing to HOLD — shows the decision was ambiguous
+  return 'UNKNOWN';
 }
 
 // ===== FILTERING =====
@@ -1020,7 +1027,7 @@ function renderSummary(entries) {
   const buy = latestEntries.filter(e => e.action === 'BUY').length;
   const sell = latestEntries.filter(e => e.action === 'SELL').length;
   const hold = latestEntries.filter(e => e.action === 'HOLD').length;
-  const total = buy + sell + hold;
+  const unknown = latestEntries.filter(e => e.action === 'UNKNOWN').length;
   const dates = [...new Set(entries.map(e => e.date))].sort();
   const tickerSet = new Set(latestEntries.map(e => e.ticker));
 
@@ -1047,6 +1054,11 @@ function renderSummary(entries) {
     <div class="summary-card kpi-clickable hold-accent${activeDrawer === 'HOLD' ? ' active' : ''}" data-action="HOLD" onclick="toggleDrawer('HOLD')">
       <div class="label">持有 · ${latestDate}</div>
       <div class="value hold">${hold}</div>
+      <div class="click-hint">点击查看标的</div>
+    </div>
+    <div class="summary-card kpi-clickable unknown-accent${activeDrawer === 'UNKNOWN' ? ' active' : ''}" data-action="UNKNOWN" onclick="toggleDrawer('UNKNOWN')">
+      <div class="label">未定 · ${latestDate}</div>
+      <div class="value" style="color:var(--neutral)">${unknown}</div>
       <div class="click-hint">点击查看标的</div>
     </div>
     <div class="summary-card">
@@ -1081,8 +1093,8 @@ function openDrawer(action) {
   const count = document.getElementById('drawerCount');
   const grid = document.getElementById('drawerGrid');
 
-  const labels = { BUY: '买入', SELL: '卖出', HOLD: '持有' };
-  const colors = { BUY: 'var(--buy)', SELL: 'var(--sell)', HOLD: 'var(--hold)' };
+  const labels = { BUY: '买入', SELL: '卖出', HOLD: '持有', UNKNOWN: '未定' };
+  const colors = { BUY: 'var(--buy)', SELL: 'var(--sell)', HOLD: 'var(--hold)', UNKNOWN: 'var(--neutral)' };
 
   title.innerHTML = `<span class="action-dot ${action.toLowerCase()}" style="display:inline-block;width:10px;height:10px;top:0"></span> <span style="color:${colors[action]}">${labels[action]}</span> 信号标的`;
   count.textContent = `${entries.length} 个标的 · ${latestDate}`;
@@ -1273,7 +1285,7 @@ function renderTimeline(entries) {
 }
 
 function actionLabel(action) {
-  const map = { BUY: '买入', SELL: '卖出', HOLD: '持有' };
+  const map = { BUY: '买入', SELL: '卖出', HOLD: '持有', UNKNOWN: '未定' };
   return map[action] || action;
 }
 function actionDot(action) {
