@@ -479,12 +479,6 @@ tr:hover td { background: rgba(28, 26, 22, 0.02); }
 .badge.sell { background: var(--sell-bg); color: var(--sell); border-color: var(--sell-border); }
 .badge.hold { background: var(--hold-bg); color: var(--hold); border-color: var(--hold-border); }
 
-/* Decision change arrows */
-.change-arrow { font-size: 13px; margin-left: 3px; font-weight: 500; }
-.change-arrow.upgrade   { color: var(--buy); }
-.change-arrow.downgrade { color: var(--sell); }
-.change-arrow.neutral   { color: var(--text-tertiary); }
-
 /* Mini timeline dots */
 .mini-timeline { display: flex; gap: 4px; align-items: center; }
 .mini-dot {
@@ -1152,15 +1146,6 @@ function renderTickerFilter(entries) {
   select.onchange = () => render();
 }
 
-function getDecisionChange(prev, curr) {
-  if (!prev || !curr) return '';
-  const score = { BUY: 2, HOLD: 1, SELL: 0 };
-  const diff = score[curr.action] - score[prev.action];
-  if (diff > 0) return '<span class="change-arrow upgrade">↑</span>';
-  if (diff < 0) return '<span class="change-arrow downgrade">↓</span>';
-  return '<span class="change-arrow neutral">→</span>';
-}
-
 // ===== MATRIX VIEW =====
 function renderMatrix(entries) {
   const { dates, tickers, matrix } = getMatrix(entries);
@@ -1212,13 +1197,10 @@ function renderMatrix(entries) {
       ).join('') +
       '</div></td>';
 
-    let prevEntry = null;
     for (const date of dates) {
       const entry = matrix[`${ticker}|${date}`];
       if (entry) {
-        const change = getDecisionChange(prevEntry, entry);
-        const hasRationale = entry.final_decision || entry.investment_plan;
-        // Build price tooltip for this entry
+        // Build price tooltip
         const ep = extractPricesFromEntry(entry);
         let tooltip = `${ticker} · ${actionLabel(entry.action)} · ${date}`;
         if (ep) {
@@ -1229,19 +1211,16 @@ function renderMatrix(entries) {
         }
         html += `<td class="decision-cell">
           <span class="badge ${entry.action.toLowerCase()}"
-                data-has-rationale="${!!hasRationale}"
                 data-ticker="${entry.ticker}"
                 data-date="${entry.date}"
                 data-variant="${entry.variant}"
                 title="${escapeHtml(tooltip)}"
                 onclick="openModal(this)">
-            ${actionBadge(entry.action)}${change}
+            ${actionBadge(entry.action)}
           </span>
         </td>`;
-        prevEntry = entry;
       } else {
         html += '<td class="decision-cell"><span style="color:var(--neutral)">&mdash;</span></td>';
-        prevEntry = null;
       }
     }
     html += '</tr>';
