@@ -405,14 +405,15 @@ body::after {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--card-border);
-  overflow-x: auto;
   opacity: 0; transform: translateY(8px);
   animation: card-enter 400ms var(--ease-out) 350ms forwards;
 }
+.table-scroll { overflow-x: auto; }
 table {
   width: 100%; border-collapse: collapse;
   min-width: 720px;
 }
+thead { position: sticky; top: 0; z-index: 2; }
 th {
   padding: 14px 16px; text-align: left;
   font-size: 11px; font-weight: 600;
@@ -420,7 +421,7 @@ th {
   text-transform: uppercase; letter-spacing: 0.06em;
   border-bottom: 1px solid var(--divider);
   white-space: nowrap;
-  position: sticky; top: 0; background: var(--card-bg);
+  background: var(--card-bg);
 }
 th.date-header { text-align: center; }
 th.date-header .variant-tag {
@@ -1157,7 +1158,7 @@ function renderMatrix(entries) {
   const { dates, tickers, matrix } = getMatrix(entries);
   const allDates = [...new Set(allEntries.map(e => e.date))].sort();
 
-  let html = '<div class="table-wrap"><table>';
+  let html = '<div class="table-wrap"><div class="table-scroll"><table>';
   html += '<thead><tr><th>标的</th><th>趋势</th>';
   for (const date of dates) {
     const variants = [...new Set(entries.filter(e => e.date === date).map(e => e.variant))];
@@ -1231,7 +1232,7 @@ function renderMatrix(entries) {
     }
     html += '</tr>';
   }
-  html += '</tbody></table></div>';
+  html += '</tbody></table></div></div>';
   document.getElementById('mainArea').innerHTML = html;
 }
 
