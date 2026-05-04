@@ -8,7 +8,7 @@ import sys
 import copy
 import json
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -34,14 +34,7 @@ def load_tickers() -> list[str]:
 
 
 def get_analysis_date() -> str:
-    date = datetime.now()
-    if date.weekday() == 0:
-        date -= timedelta(days=3)
-    elif date.weekday() == 6:
-        date -= timedelta(days=2)
-    elif date.weekday() == 5:
-        date -= timedelta(days=1)
-    return date.strftime("%Y-%m-%d")
+    return datetime.now().strftime("%Y-%m-%d")
 
 
 def build_config() -> dict:
