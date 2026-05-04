@@ -816,42 +816,63 @@ let activeView = 'matrix';
 let activeDrawer = null; // 'BUY' | 'SELL' | 'HOLD' | null
 
 // ===== PRICE / POSITION EXTRACTION =====
+function isPriceContext(text, matchIndex, captured) {
+  // Skip numbers that are clearly technical indicator periods (EMA, SMA, MA, RSI periods etc)
+  const before = text.substring(Math.max(0, matchIndex - 30), matchIndex);
+  const after = text.substring(matchIndex, matchIndex + 30);
+  const context = before + after;
+  if (/\b(EMA|SMA|VWMA|RSI|MACD|window|period|day)\b/i.test(context)) {
+    const num = parseFloat(captured);
+    // If it's a small integer near a TA term, skip
+    if (num < 20 && num === Math.floor(num)) return false;
+  }
+  // Skip numbers that are clearly P/E ratios
+  if (/P\/?E|price.to.earn|forward/i.test(before)) return false;
+  return true;
+}
+
 function extractPrices(traderPlan) {
   if (!traderPlan) return null;
   const text = traderPlan.replace(/<[^>]+>/g, ' '); // strip XML/HTML tags
   const result = {};
 
-  // Current / last close price
-  let m = text.match(/(?:Last Close|current price|price(?: is)?|trading at|closed at)[:\s]*\$?(\d+\.?\d*)/i)
-       || text.match(/(?:price[:\s]*)\$?(\d+\.?\d{2})/i)
-       || text.match(/\$(\d+\.?\d{2})/);
-  if (m) result.currentPrice = parseFloat(m[1]);
+  // Current / last close price — require $ prefix for reliability
+  let m = text.match(/(?:Last Close|current price|trading at|closed at)[:\s]*\$(\d+\.?\d*)/i)
+       || text.match(/\$(\d{2,4}\.?\d{0,2})\b(?!\s*(?:EPS|每股|亿|M|B|million|billion))/i);
+  if (m && isPriceContext(text, m.index + m[0].indexOf(m[1]), m[1])) {
+    result.currentPrice = parseFloat(m[1]);
+  }
 
-  // Entry / buy price
-  m = text.match(/(?:entry|buy|add|enter|initiate)[^.]*?\$?(\d+\.?\d*)/i)
-   || text.match(/(?:at|near|around)\s+\$?(\d+\.?\d*)/i);
-  if (m) result.entryPrice = parseFloat(m[1]);
+  // Entry / buy price — require $ sign
+  m = text.match(/(?:entry|buy|add|enter|initiate)[^.]*?\$(\d+\.?\d*)/i)
+   || text.match(/(?:at|near|around)\s+\$(\d+\.?\d*)/i);
+  if (m && isPriceContext(text, m.index + m[0].indexOf(m[1]), m[1])) {
+    result.entryPrice = parseFloat(m[1]);
+  }
 
-  // Target / upside price
-  m = text.match(/(?:target|upside|objective)[^.]*?\$?(\d+\.?\d*)/i)
-   || text.match(/(?:to\s+\$?(\d+\.?\d*))/i);
-  if (m) result.targetPrice = parseFloat(m[1]);
+  // Target / upside price — require $ sign
+  m = text.match(/(?:target|upside|objective)[^.]*?\$(\d+\.?\d*)/i);
+  if (m && isPriceContext(text, m.index + m[0].indexOf(m[1]), m[1])) {
+    result.targetPrice = parseFloat(m[1]);
+  }
 
-  // Stop loss
-  m = text.match(/(?:stop[-\s]loss|stop|cut[-\s]loss|below)[^.]*?\$?(\d+\.?\d*)/i);
+  // Stop loss — require $ sign or "below $" pattern
+  m = text.match(/(?:stop[-\s]loss|stop|cut[-\s]loss|below)[^.]*?\$(\d+\.?\d*)/i);
   if (m) result.stopPrice = parseFloat(m[1]);
 
   // Position size
-  m = text.match(/(?:position[:\s]*|allocate[:\s]*|buy[:\s]*)(\d+[\d.]*\s*%|\d+\/\d+|full|half|quarter)/i)
+  m = text.match(/(?:position[:\s]*|reduce[^.]*?(?:by|：)\s*|cut[^.]*?(?:by|：)\s*)(\d+[\d.]*\s*%|\d+\/\d+|full|half|quarter)/i)
    || text.match(/(\d+\s*%\s*(?:of|position|allocation))/i)
-   || text.match(/(full position|half position|quarter position)/i);
+   || text.match(/(full position|half position|quarter position)/i)
+   || text.match(/reduce\s+(?:exposure\s+)?by\s+(\d+[\d.]*\s*%)/i);
   if (m) result.position = m[1].trim();
 
-  // Re-entry price
-  m = text.match(/(?:re[-\s]?enter|re[-\s]?entry|buy[-\s]?again|add[-\s]?more)[^.]*?\$?(\d+\.?\d*)/i)
-   || text.match(/(?:pull[-\s]?back[^.]*?(?:to|at|near))[^.]*?\$?(\d+\.?\d*)/i)
-   || text.match(/(?:dip[^.]*?(?:to|at|near))[^.]*?\$?(\d+\.?\d*)/i);
-  if (m) result.reEntryPrice = parseFloat(m[1]);
+  // Re-entry price — require $ sign
+  m = text.match(/(?:re[-\s]?enter|re[-\s]?entry|buy[-\s]?again|add[-\s]?more)[^.]*?\$(\d+\.?\d*)/i)
+   || text.match(/(?:reclaim|recover|back\s+(?:above|to))[^.]*?\$(\d+\.?\d*)/i);
+  if (m && isPriceContext(text, m.index + m[0].indexOf(m[1]), m[1])) {
+    result.reEntryPrice = parseFloat(m[1]);
+  }
 
   // If no explicit entry price but we have a current price, use it
   if (!result.entryPrice && result.currentPrice) result.entryPrice = result.currentPrice;
