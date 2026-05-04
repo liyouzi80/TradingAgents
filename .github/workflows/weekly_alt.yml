@@ -77,12 +77,16 @@ jobs:
           path: reports/
           retention-days: 30
 
-      - name: Commit reports back to repo
+      - name: Aggregate dashboard data
+        if: success()
+        run: python3 scripts/aggregate_reports.py reports/ dashboard/
+
+      - name: Commit reports and dashboard back to repo
         if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add reports/
+          git add reports/ dashboard/dashboard_data.json
 
           # 没有变化就跳过
           git diff --staged --quiet && exit 0
@@ -100,8 +104,8 @@ jobs:
             # pull 时如果发生冲突,使用 -X theirs 接受远端,然后用本地报告覆盖
             if git pull --no-rebase --strategy-option=theirs --no-edit origin main; then
               # 重新写入本地报告(用我们刚生成的覆盖)
-              git checkout HEAD -- reports/ 2>/dev/null || true
-              git add reports/
+              git checkout HEAD -- reports/ dashboard/ 2>/dev/null || true
+              git add reports/ dashboard/dashboard_data.json
 
               # 如果本次有改动就再 commit
               if ! git diff --staged --quiet; then
