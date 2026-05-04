@@ -21,12 +21,14 @@ import sys
 def normalize_action(action, raw_decision):
     if action and action != 'UNKNOWN':
         return action
+    if action == 'UNKNOWN':
+        return 'UNKNOWN'
     rd = (raw_decision or '').lower()
     if any(w in rd for w in ('overweight', 'buy')):
         return 'BUY'
     if any(w in rd for w in ('underweight', 'sell')):
         return 'SELL'
-    return 'HOLD'
+    return 'UNKNOWN'
 
 
 def parse_ticker_file(fpath):

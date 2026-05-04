@@ -958,11 +958,13 @@ async function loadReports() {
 }
 
 function normalizeAction(action, rawDecision) {
+  // Trust the LLM's structured action field when present
   if (action && action !== 'UNKNOWN') return action;
+  if (action === 'UNKNOWN') return 'UNKNOWN';
+  // Only use regex fallback when action field is truly missing
   const rd = (rawDecision || '').toLowerCase();
   if (/overweight|buy/.test(rd)) return 'BUY';
   if (/underweight|sell/.test(rd)) return 'SELL';
-  // Keep UNKNOWN instead of forcing to HOLD — shows the decision was ambiguous
   return 'UNKNOWN';
 }
 
