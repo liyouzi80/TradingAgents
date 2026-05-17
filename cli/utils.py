@@ -6,7 +6,7 @@ import questionary
 from dotenv import find_dotenv, set_key
 from rich.console import Console
 
-from cli.models import AnalystType
+from cli.models import AnalystType, AssetType
 from tradingagents.llm_clients.api_key_env import get_api_key_env
 from tradingagents.llm_clients.model_catalog import get_model_options
 
@@ -20,6 +20,8 @@ ANALYST_ORDER = [
     ("News Analyst", AnalystType.NEWS),
     ("Fundamentals Analyst", AnalystType.FUNDAMENTALS),
 ]
+
+CRYPTO_SUFFIXES = ("-USD", "-USDT", "-USDC", "-BTC", "-ETH")
 
 
 def get_ticker() -> str:
@@ -45,6 +47,25 @@ def get_ticker() -> str:
 def normalize_ticker_symbol(ticker: str) -> str:
     """Normalize ticker input while preserving exchange suffixes."""
     return ticker.strip().upper()
+
+
+def detect_asset_type(ticker: str) -> AssetType:
+    normalized_ticker = ticker.strip().upper()
+    if normalized_ticker.endswith(CRYPTO_SUFFIXES):
+        return AssetType.CRYPTO
+    return AssetType.STOCK
+
+
+def filter_analysts_for_asset_type(
+    analysts: List[AnalystType], asset_type: AssetType
+) -> List[AnalystType]:
+    if asset_type != AssetType.CRYPTO:
+        return analysts
+    return [
+        analyst
+        for analyst in analysts
+        if analyst != AnalystType.FUNDAMENTALS
+    ]
 
 
 def get_analysis_date() -> str:
@@ -80,12 +101,18 @@ def get_analysis_date() -> str:
     return date.strip()
 
 
-def select_analysts() -> List[AnalystType]:
+def select_analysts(asset_type: AssetType = AssetType.STOCK) -> List[AnalystType]:
     """Select analysts using an interactive checkbox."""
+    available_analysts = filter_analysts_for_asset_type(
+        [value for _, value in ANALYST_ORDER],
+        asset_type,
+    )
     choices = questionary.checkbox(
         "Select Your [Analysts Team]:",
         choices=[
-            questionary.Choice(display, value=value) for display, value in ANALYST_ORDER
+            questionary.Choice(display, value=value)
+            for display, value in ANALYST_ORDER
+            if value in available_analysts
         ],
         instruction="\n- Press Space to select/unselect analysts\n- Press 'a' to select/unselect all\n- Press Enter when done",
         validate=lambda x: len(x) > 0 or "You must select at least one analyst.",
@@ -234,6 +261,10 @@ def select_deep_thinking_agent(provider) -> str:
 
 def select_llm_provider() -> tuple[str, str | None]:
     """Select the LLM provider and its API endpoint."""
+    # Ollama users can point at a remote ollama-serve via OLLAMA_BASE_URL
+    # (convention from the broader Ollama ecosystem); falls back to the
+    # localhost default when unset.
+    ollama_url = os.environ.get("OLLAMA_BASE_URL") or "http://localhost:11434/v1"
     # (display_name, provider_key, base_url)
     PROVIDERS = [
         ("OpenAI", "openai", "https://api.openai.com/v1"),
@@ -246,7 +277,7 @@ def select_llm_provider() -> tuple[str, str | None]:
         ("MiniMax", "minimax", "https://api.minimax.io/v1"),
         ("OpenRouter", "openrouter", "https://openrouter.ai/api/v1"),
         ("Azure OpenAI", "azure", None),
-        ("Ollama", "ollama", "http://localhost:11434/v1"),
+        ("Ollama", "ollama", ollama_url),
     ]
 
     choice = questionary.select(
@@ -411,6 +442,36 @@ def ask_minimax_region() -> tuple[str, str]:
             ("pointer", "fg:cyan noinherit"),
         ]),
     ).ask()
+
+
+def confirm_ollama_endpoint(url: str) -> None:
+    """Show the resolved Ollama endpoint after provider selection.
+
+    Surfaces three things the user benefits from seeing before model
+    selection: which URL we'll actually hit, where it came from
+    (\`OLLAMA_BASE_URL\` vs default), and a soft warning if the URL is
+    missing the scheme/port that ollama-serve expects. The warning is
+    advisory only — we don't reject malformed input, since the user may
+    be doing something deliberately unusual (e.g. a reverse-proxy path).
+    """
+    from_env = os.environ.get("OLLAMA_BASE_URL")
+    origin = " (from OLLAMA_BASE_URL)" if from_env and from_env == url else ""
+    console.print(f"[green]✓ Using Ollama at {url}{origin}[/green]")
+
+    if not url.startswith(("http://", "https://")):
+        console.print(
+            f"[yellow]Note: {url!r} is missing a scheme. "
+            f"Ollama-serve typically expects a URL like "
+            f"http://<host>:11434/v1.[/yellow]"
+        )
+    elif ":11434" not in url and "://localhost" not in url and "://127.0.0.1" not in url:
+        # Soft hint when the port differs from the ollama-serve default
+        # and the host isn't local (where users sometimes proxy on :80).
+        console.print(
+            f"[yellow]Note: {url!r} doesn't include port 11434. "
+            f"Make sure your remote ollama-serve listens on the port "
+            f"shown above.[/yellow]"
+        )
 
 
 def ensure_api_key(provider: str) -> Optional[str]:

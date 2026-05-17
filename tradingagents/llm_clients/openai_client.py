@@ -118,6 +118,11 @@ class MinimaxChatOpenAI(NormalizedChatOpenAI):
     ``reasoning_split=True`` in the request body redirects the thinking
     block into ``reasoning_details`` so ``content`` stays clean.
 
+    The flag is gated by ``ModelCapabilities.requires_reasoning_split``
+    because non-reasoning MiniMax endpoints (Coding Plan, MiniMax-Text-01)
+    reject the parameter via the openai SDK's strict kwarg validation
+    (#826).
+
     Tool-choice handling for M2.x — those models accept only the string
     enum ``{"none", "auto"}`` and reject langchain's function-spec dict —
     is handled by the capability dispatch in
@@ -126,7 +131,8 @@ class MinimaxChatOpenAI(NormalizedChatOpenAI):
 
     def _get_request_payload(self, input_, *, stop=None, **kwargs):
         payload = super()._get_request_payload(input_, stop=stop, **kwargs)
-        payload.setdefault("reasoning_split", True)
+        if get_capabilities(self.model_name).requires_reasoning_split:
+            payload.setdefault("reasoning_split", True)
         return payload
 
 
@@ -153,6 +159,22 @@ _PROVIDER_BASE_URL = {
     "openrouter": "https://openrouter.ai/api/v1",
     "ollama":     "http://localhost:11434/v1",
 }
+
+
+def _resolve_provider_base_url(provider: str) -> Optional[str]:
+    """Default base URL for ``provider``, with env-var overrides where defined.
+
+    Currently only Ollama supports an env-var override (``OLLAMA_BASE_URL``),
+    matching the convention in the broader Ollama tooling ecosystem so users
+    can point at a remote ollama-serve without editing code. The check is
+    call-time, not import-time, so tests that monkeypatch the env after
+    import behave correctly.
+    """
+    if provider == "ollama":
+        env_url = os.environ.get("OLLAMA_BASE_URL")
+        if env_url:
+            return env_url
+    return _PROVIDER_BASE_URL.get(provider)
 
 
 class OpenAIClient(BaseLLMClient):
@@ -183,7 +205,7 @@ class OpenAIClient(BaseLLMClient):
         # client (e.g. a corporate proxy) takes precedence over the
         # provider default so users can route through their own gateway.
         if self.provider in _PROVIDER_BASE_URL:
-            llm_kwargs["base_url"] = self.base_url or _PROVIDER_BASE_URL[self.provider]
+            llm_kwargs["base_url"] = self.base_url or _resolve_provider_base_url(self.provider)
             api_key_env = get_api_key_env(self.provider)
             if api_key_env:
                 api_key = os.environ.get(api_key_env)
