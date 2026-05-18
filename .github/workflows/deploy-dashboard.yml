@@ -37,6 +37,7 @@ jobs:
           mkdir -p _site
           cp dashboard/* _site/
           cp reports/summary_*.json _site/
+          cp dashboard/dashboard.html _site/index.html
 
       - uses: actions/upload-pages-artifact@v3
         with:
